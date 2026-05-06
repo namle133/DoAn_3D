@@ -23,3 +23,6 @@ DoAn_3D/
 
 Cài extension **Live Server** → chuột phải `index.html` → *Open with Live
 Server*.
+
+<img width="800" height="450" alt="vinhomes-west-point" src="https://github.com/user-attachments/assets/e795ace0-209c-4398-a8d8-5b3290aabc66" />
+
