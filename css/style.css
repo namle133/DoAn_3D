@@ -1,0 +1,11 @@
+html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+}
+
+#viewDiv {
+    position: absolute;
+    inset: 0;
+}
