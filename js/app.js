@@ -41,7 +41,7 @@ require([
     });
 
     // SceneView
-    const homePos = localToLngLat(220, -280);
+    const homePos = localToLngLat(450, -450);
     const view = new SceneView({
         container: "viewDiv",
         map: map,
@@ -50,10 +50,10 @@ require([
             position: {
                 longitude: homePos.longitude,
                 latitude: homePos.latitude,
-                z: 240
+                z: 750
             },
-            heading: 322,
-            tilt: 62
+            heading: 315,
+            tilt: 45
         },
         environment: {
             background: { type: "color", color: [222, 232, 242, 1] },
@@ -154,19 +154,53 @@ require([
     // Podium
     function buildPodium(p) {
         const totalH = p.floors * p.floorHeight;
+        const podiumAttributes = {
+        id: p.id,
+        name: p.name,
+        floors: p.floors,
+        modeledHeight: p.modeledHeight || totalH,
+        usage: p.usage,
+        floorInfo: p.floorInfo,
+        mainFacilities: p.mainFacilities,
+        rooftopFacilities: p.rooftopFacilities,
+        parking: p.parking,
+        serviceRole: p.serviceRole,
+        note: p.note
+    };
+
+    const podiumPopup = {
+        title: "{name}",
+        content: [{
+            type: "fields",
+            fieldInfos: [
+                { fieldName: "id", label: "Mã khu" },
+                { fieldName: "floors", label: "Số tầng khối đế" },
+                { fieldName: "modeledHeight", label: "Chiều cao mô phỏng (m)" },
+                { fieldName: "usage", label: "Chức năng" },
+                { fieldName: "floorInfo", label: "Phân bổ tầng" },
+                { fieldName: "mainFacilities", label: "Tiện ích chính" },
+                { fieldName: "rooftopFacilities", label: "Tiện ích trên mái khối đế" },
+                { fieldName: "parking", label: "Bãi đỗ xe" },
+                { fieldName: "serviceRole", label: "Vai trò phục vụ" },
+                { fieldName: "note", label: "Ghi chú dữ liệu" }
+            ]
+        }]
+    };
 
         addBox({
             x: p.center.x, y: p.center.y, z: 0,
             width: p.width, depth: p.depth, height: 1.2,
-            color: p.baseColor, roughness: 0.85
+            color: p.baseColor, roughness: 0.85,
+            attributes: podiumAttributes,
+            popup: podiumPopup
         });
 
         addBox({
             x: p.center.x, y: p.center.y, z: 1.2,
             width: p.width - 2, depth: p.depth - 2, height: totalH - 1.2,
             color: p.glassColor, metallic: 0.4, roughness: 0.18,
-            attributes: { id: p.id, name: p.name, floors: p.floors },
-            popup: { title: "{name}", content: "Số tầng: <b>{floors}</b>" }
+            attributes: podiumAttributes,
+            popup: podiumPopup
         });
 
         for (let f = 1; f <= p.floors; f++) {
@@ -183,28 +217,52 @@ require([
     function buildTower(t) {
         const cx = t.center.x;
         const cy = t.center.y;
-        const totalH = t.floors * t.floorHeight;
+        const totalH = t.modeledHeight || (t.floors * t.floorHeight);
         const baseZ = 18;
+        const towerAttributes = {
+            id: t.id,
+            name: t.name,
+            floors: t.floors,
+            modeledHeight: t.modeledHeight,
+            basementFloors: t.basementFloors,
+            floorInfo: t.floorInfo,
+            units: t.units,
+            density: t.density,
+            elevators: t.elevators,
+            apartmentTypes: t.apartmentTypes,
+            areaRange: t.areaRange,
+            handoverStandard: t.handoverStandard,
+            deliveryTime: t.deliveryTime,
+            mainFace: t.mainFace
+        };
 
+        const towerPopup = {
+            title: "{name}",
+            content: [{
+                type: "fields",
+                fieldInfos: [
+                    { fieldName: "id", label: "Mã tòa" },
+                    { fieldName: "floors", label: "Số tầng nổi" },
+                    { fieldName: "modeledHeight", label: "Chiều cao mô phỏng (m)" },
+                    { fieldName: "basementFloors", label: "Số tầng hầm" },
+                    { fieldName: "floorInfo", label: "Phân bổ tầng" },
+                    { fieldName: "units", label: "Tổng số căn" },
+                    { fieldName: "density", label: "Mật độ căn hộ" },
+                    { fieldName: "elevators", label: "Thang máy" },
+                    { fieldName: "apartmentTypes", label: "Loại hình căn hộ" },
+                    { fieldName: "areaRange", label: "Diện tích căn hộ" },
+                    { fieldName: "handoverStandard", label: "Tiêu chuẩn bàn giao" },
+                    { fieldName: "deliveryTime", label: "Thời điểm bàn giao" },
+                    { fieldName: "mainFace", label: "Mặt chính" }
+                ]
+            }]
+        };
         addBox({
             x: cx, y: cy, z: baseZ,
             width: t.width - 1.4, depth: t.depth - 1.4, height: totalH,
             color: t.glassColor, metallic: 0.55, roughness: 0.15,
-            attributes: {
-                id: t.id, name: t.name,
-                floors: t.floors, height: totalH
-            },
-            popup: {
-                title: "{name}",
-                content: [{
-                    type: "fields",
-                    fieldInfos: [
-                        { fieldName: "id", label: "Mã toà" },
-                        { fieldName: "floors", label: "Số tầng" },
-                        { fieldName: "height", label: "Chiều cao thân (m)" }
-                    ]
-                }]
-            }
+            attributes: towerAttributes,
+            popup: towerPopup
         });
 
         // Slab
@@ -213,7 +271,9 @@ require([
             addBox({
                 x: cx, y: cy, z: z,
                 width: t.width, depth: t.depth, height: 0.36,
-                color: t.slabColor, roughness: 0.85
+                color: t.slabColor, roughness: 0.85,
+                attributes: towerAttributes,
+                popup: towerPopup
             });
         }
 
@@ -225,23 +285,65 @@ require([
                 y: cy + (sy * (t.depth - ps)) / 2,
                 z: baseZ,
                 width: ps, depth: ps, height: totalH,
-                color: t.pillarColor, roughness: 0.75
+                color: t.pillarColor, roughness: 0.75,
+                attributes: towerAttributes,
+                popup: towerPopup
             });
         });
 
         // Mullion
-        const mc = 5;
-        for (let i = 1; i < mc; i++) {
-            const fx = -t.width / 2 + (i * t.width) / mc;
-            [-1, 1].forEach((sy) => {
+        // Mullion theo mặt chính của từng tòa
+        const mc = 8;
+        const mainFace = t.mainFace || "bottom";
+
+        if (mainFace === "top" || mainFace === "bottom") {
+            const sideY = mainFace === "top" ? 1 : -1;
+
+            for (let i = 1; i < mc; i++) {
+                const fx = -t.width / 2 + (i * t.width) / mc;
+
                 addBox({
                     x: cx + fx,
-                    y: cy + (sy * t.depth) / 2,
+                    y: cy + sideY * t.depth / 2,
                     z: baseZ,
-                    width: 0.6, depth: 0.4, height: totalH,
-                    color: t.pillarColor, roughness: 0.75
+                    width: 0.7,
+                    depth: 0.45,
+                    height: totalH,
+                    color: t.pillarColor,
+                    roughness: 0.75,
+                    attributes: {
+                        ...towerAttributes,
+                        partName: `Mullion mặt chính ${t.id}`,
+                        partType: "Mullion"
+                    },
+                    popup: towerPopup
                 });
-            });
+            }
+        }
+
+        if (mainFace === "left" || mainFace === "right") {
+            const sideX = mainFace === "right" ? 1 : -1;
+
+            for (let i = 1; i < mc; i++) {
+                const fy = -t.depth / 2 + (i * t.depth) / mc;
+
+                addBox({
+                    x: cx + sideX * t.width / 2,
+                    y: cy + fy,
+                    z: baseZ,
+                    width: 0.45,
+                    depth: 0.7,
+                    height: totalH,
+                    color: t.pillarColor,
+                    roughness: 0.75,
+                    attributes: {
+                        ...towerAttributes,
+                        partName: `Mullion mặt chính ${t.id}`,
+                        partType: "Mullion"
+                    },
+                    popup: towerPopup
+                });
+            }
         }
 
         // Crown
