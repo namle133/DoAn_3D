@@ -8,14 +8,26 @@ dựng bằng `SceneView` của **ArcGIS Maps SDK for JavaScript 4.30**.
 
 ```
 DoAn_3D/
-├── index.html          # Trang chính, nhúng ArcGIS SDK
-├── css/style.css       # Style cho panel & UI
+├── index.html          # Trang chính, nhúng ArcGIS SDK + UI overlay
+├── css/style.css       # Style cho title bar, north arrow
 ├── js/
-│   |
 │   ├── buildings.js    # Toạ độ + kích thước các toà nhà (xấp xỉ)
-│   └── app.js          # Tạo Map / SceneView / GraphicsLayer extrude
+│   └── app.js          # Map / SceneView / Mesh + widgets (Compass, Search, ...)
 └── README.md
 ```
+
+## Tính năng
+
+- **Bản đồ nền**: OpenStreetMap mặc định, có thể đổi sang Satellite, Hybrid,
+  Topo, Streets, Dark Gray qua nút chọn basemap (góc trên-phải).
+- **Mô hình 3D**: 3 toà tháp W1/W2/W3 + khối đế podium, dựng bằng `Mesh.createBox`
+  (thân kính + dải sàn + cột góc + mullion + khối kỹ thuật + antenna).
+- **Định hướng (la bàn)**:
+  - Compass widget của Esri ở góc trên-trái (nhấn để quay về hướng Bắc).
+  - **North arrow lớn** ở góc dưới-phải hiển thị 4 hướng N/E/S/W, mũi tên đỏ
+    luôn chỉ về phía Bắc bất kể camera xoay.
+- **Công cụ**: Home, Fullscreen, ScaleBar (thước tỉ lệ), Coordinates readout
+  (toạ độ con trỏ), Zoom, Navigation Toggle.
 
 ## Cách chạy
 

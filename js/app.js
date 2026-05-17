@@ -10,8 +10,17 @@ require([
     "esri/Graphic",
     "esri/layers/GraphicsLayer",
     "esri/geometry/Point",
-    "esri/geometry/Mesh"
-], function (Map, Basemap, SceneView, Graphic, GraphicsLayer, Point, Mesh) {
+    "esri/geometry/Mesh",
+    "esri/widgets/Compass",
+    "esri/widgets/ScaleBar",
+    "esri/widgets/Expand",
+    "esri/widgets/BasemapGallery",
+    "esri/widgets/Home",
+    "esri/widgets/Fullscreen"
+], function (
+    Map, Basemap, SceneView, Graphic, GraphicsLayer, Point, Mesh,
+    Compass, ScaleBar, Expand, BasemapGallery, Home, Fullscreen
+) {
     const data = window.SITE_DATA;
 
     const SITE_LNG = 105.78375;
@@ -26,52 +35,128 @@ require([
         };
     }
 
-    // Empty Basemap
-    const emptyBasemap = new Basemap({
-        baseLayers: [],
-        title: "Empty",
-        id: "empty"
-    });
-
+    // Map: OpenStreetMap (không cần API key)
     const map = new Map({
-        basemap: emptyBasemap,
-        ground: {
-            surfaceColor: [180, 188, 196, 1]
-        }
+        basemap: "osm",
+        ground: { surfaceColor: [220, 225, 230, 1] }
     });
 
     // SceneView
     const homePos = localToLngLat(450, -450);
+    const HOME_VIEWPOINT = {
+        position: {
+            longitude: homePos.longitude,
+            latitude: homePos.latitude,
+            z: 750
+        },
+        heading: 315,
+        tilt: 55
+    };
+
     const view = new SceneView({
         container: "viewDiv",
         map: map,
         qualityProfile: "high",
-        camera: {
-            position: {
-                longitude: homePos.longitude,
-                latitude: homePos.latitude,
-                z: 750
-            },
-            heading: 315,
-            tilt: 45
-        },
+        camera: HOME_VIEWPOINT,
         environment: {
-            background: { type: "color", color: [222, 232, 242, 1] },
-            starsEnabled: false,
-            atmosphereEnabled: false,
+            atmosphere: { quality: "high" },
+            starsEnabled: true,
+            atmosphereEnabled: true,
             lighting: {
                 date: new Date("2026-05-06T09:30:00+07:00"),
                 directShadowsEnabled: true,
                 cameraTrackingEnabled: false
             }
         },
-        ui: { components: ["zoom", "compass", "navigation-toggle"] }
+        ui: { components: ["zoom", "navigation-toggle"] }
     });
 
     view.when(
-        () => console.log("[VWP] LocalScene ready"),
+        () => {
+            console.log("[VWP] SceneView ready");
+            setupWidgets();
+            setupNorthArrow();
+        },
         (err) => console.error("[VWP] SceneView error:", err)
     );
+
+    // -----------------------------------------------------------------
+    // WIDGETS: Compass, ScaleBar, BasemapGallery, Home, Fullscreen
+    // -----------------------------------------------------------------
+    function setupWidgets() {
+        // Home: bay về vị trí mặc định
+        const homeBtn = new Home({ view: view, viewpoint: { targetGeometry: new Point({ longitude: SITE_LNG, latitude: SITE_LAT }), scale: 5000 } });
+        homeBtn.goToOverride = function (view, goToParams) {
+            return view.goTo(HOME_VIEWPOINT, goToParams.options);
+        };
+        view.ui.add(homeBtn, "top-left");
+
+        // Compass: la bàn (nhấn để đưa heading về bắc = 0°)
+        const compass = new Compass({ view: view });
+        view.ui.add(compass, "top-left");
+
+        // Fullscreen
+        view.ui.add(new Fullscreen({ view: view }), "top-left");
+
+        // ScaleBar: thước tỉ lệ (km/m)
+        view.ui.add(new ScaleBar({ view: view, unit: "metric" }), "bottom-left");
+
+        // BasemapGallery: chọn loại bản đồ (đặt trong Expand cho gọn)
+        const basemapGallery = new BasemapGallery({
+            view: view,
+            source: [
+                Basemap.fromId("osm"),
+                Basemap.fromId("satellite"),
+                Basemap.fromId("hybrid"),
+                Basemap.fromId("topo-vector"),
+                Basemap.fromId("streets-vector"),
+                Basemap.fromId("dark-gray-vector")
+            ]
+        });
+        view.ui.add(
+            new Expand({
+                view: view,
+                content: basemapGallery,
+                expandIcon: "basemap",
+                expandTooltip: "Chọn bản đồ nền"
+            }),
+            "top-right"
+        );
+
+        // Toạ độ con trỏ (DIY): hiện kinh độ + vĩ độ ở góc dưới-phải
+        const coordEl = document.createElement("div");
+        coordEl.className = "coords-readout";
+        coordEl.textContent = "—";
+        view.ui.add(coordEl, "bottom-right");
+        view.on("pointer-move", (event) => {
+            const pt = view.toMap({ x: event.x, y: event.y });
+            if (pt) {
+                coordEl.textContent =
+                    `${pt.latitude.toFixed(5)}°N, ${pt.longitude.toFixed(5)}°E`;
+            }
+        });
+    }
+
+    // -----------------------------------------------------------------
+    // CUSTOM NORTH ARROW (mũi tên la bàn lớn ở góc dưới phải)
+    // -----------------------------------------------------------------
+    function setupNorthArrow() {
+        const arrow = document.getElementById("northArrow");
+        if (!arrow) return;
+        const inner = arrow.querySelector(".compass-inner");
+
+        // Khi camera xoay (heading thay đổi) → xoay ngược kim la bàn
+        view.watch("camera.heading", (heading) => {
+            if (inner) inner.style.transform = `rotate(${-heading}deg)`;
+        });
+
+        // Click vào la bàn → quay heading về 0 (bắc lên trên)
+        arrow.addEventListener("click", () => {
+            const cam = view.camera.clone();
+            cam.heading = 0;
+            view.goTo(cam, { duration: 800, easing: "in-out-cubic" });
+        });
+    }
 
     // GraphicsLayer
     const layer = new GraphicsLayer({
