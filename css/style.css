@@ -9,3 +9,133 @@ html, body {
     position: absolute;
     inset: 0;
 }
+
+/* =====================================================================
+   Title bar
+   ===================================================================== */
+#titleBar {
+    position: absolute;
+    top: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 20;
+    background: rgba(255, 255, 255, 0.94);
+    backdrop-filter: blur(8px);
+    border-radius: 999px;
+    padding: 8px 22px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+    pointer-events: none;
+}
+
+#titleBar .title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #0b3d91;
+    letter-spacing: 0.3px;
+}
+
+#titleBar .subtitle {
+    font-size: 11px;
+    color: #5a6573;
+    margin-top: 2px;
+}
+
+/* =====================================================================
+   North arrow / la bàn lớn
+   ===================================================================== */
+#northArrow {
+    position: absolute;
+    bottom: 80px;
+    right: 22px;
+    width: 90px;
+    height: 90px;
+    z-index: 20;
+    cursor: pointer;
+    background: radial-gradient(circle, rgba(255,255,255,0.96) 60%, rgba(255,255,255,0.78) 100%);
+    border-radius: 50%;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
+    transition: transform 0.15s ease;
+}
+
+#northArrow:hover {
+    transform: scale(1.06);
+}
+
+#northArrow .compass-inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transition: transform 0.25s ease-out;
+}
+
+#northArrow .compass-letter {
+    position: absolute;
+    font-weight: 700;
+    font-size: 12px;
+    color: #444;
+    transform: translate(-50%, -50%);
+    user-select: none;
+}
+
+#northArrow .compass-letter.north {
+    top: 10px;
+    left: 50%;
+    color: #c0392b;
+    font-size: 14px;
+}
+
+#northArrow .compass-letter.east {
+    top: 50%;
+    left: calc(100% - 10px);
+}
+
+#northArrow .compass-letter.south {
+    top: calc(100% - 10px);
+    left: 50%;
+}
+
+#northArrow .compass-letter.west {
+    top: 50%;
+    left: 10px;
+}
+
+#northArrow .compass-needle {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-left: 7px solid transparent;
+    border-right: 7px solid transparent;
+    border-bottom: 32px solid #c0392b;
+    transform: translate(-50%, -100%);
+}
+
+/* =====================================================================
+   Coordinates readout
+   ===================================================================== */
+.coords-readout {
+    background: rgba(255, 255, 255, 0.9);
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    color: #1d2733;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+#northArrow .compass-needle::after {
+    content: "";
+    position: absolute;
+    top: 32px;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-left: 7px solid transparent;
+    border-right: 7px solid transparent;
+    border-top: 32px solid #6c7480;
+    transform: translateX(-50%);
+}
