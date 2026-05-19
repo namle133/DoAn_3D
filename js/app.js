@@ -11,6 +11,7 @@ require([
     "esri/layers/GraphicsLayer",
     "esri/geometry/Point",
     "esri/geometry/Mesh",
+    "esri/symbols/WebStyleSymbol",
     "esri/widgets/Compass",
     "esri/widgets/ScaleBar",
     "esri/widgets/Expand",
@@ -18,7 +19,7 @@ require([
     "esri/widgets/Home",
     "esri/widgets/Fullscreen"
 ], function (
-    Map, Basemap, SceneView, Graphic, GraphicsLayer, Point, Mesh,
+    Map, Basemap, SceneView, Graphic, GraphicsLayer, Point, Mesh, WebStyleSymbol,
     Compass, ScaleBar, Expand, BasemapGallery, Home, Fullscreen
 ) {
     const data = window.SITE_DATA;
@@ -41,16 +42,16 @@ require([
         ground: { surfaceColor: [220, 225, 230, 1] }
     });
 
-    // SceneView
-    const homePos = localToLngLat(450, -450);
+    // SceneView - Căn chỉnh góc nhìn camera gần hơn, tập trung chính xác vào tâm dự án (0, 0)
+    const homePos = localToLngLat(140, -140); // Đưa vị trí camera gần hơn nhiều
     const HOME_VIEWPOINT = {
         position: {
             longitude: homePos.longitude,
             latitude: homePos.latitude,
-            z: 750
+            z: 220 // Độ cao Z thấp hơn (220m thay vì 750m) để nhìn cận cảnh chi tiết sắc nét cực đẹp
         },
-        heading: 315,
-        tilt: 55
+        heading: 315, // Hướng nhìn từ Đông Nam chếch sang Tây Bắc
+        tilt: 60 // Độ nghiêng 60 độ lý tưởng để ngắm toàn cảnh 3D nổi bật
     };
 
     const view = new SceneView({
@@ -158,31 +159,149 @@ require([
         });
     }
 
-    // GraphicsLayer
+    // GraphicsLayer - Sử dụng relative-to-ground để đồng bộ các Mesh 3D sát khít với mặt đất thực tế
     const layer = new GraphicsLayer({
         title: "Vinhomes West Point",
-        elevationInfo: { mode: "absolute-height" }
+        elevationInfo: { mode: "relative-to-ground" }
     });
     map.add(layer);
 
-    // Helper
+    // Khởi tạo các cấu hình mặc định bổ sung cho bảng điều khiển BIM
+    window.WPConfig = window.WPConfig || {};
+    window.WPConfig.currentHeightLimit = 160;
+    window.WPConfig.terrainZOffset = -0.30;
+    window.WPConfig.roadsZOffset = 0.00;
+
+    // Các cờ cấu hình chính bật mặc định
+    window.WPConfig.ENABLE_TERRAIN = true;
+    window.WPConfig.ENABLE_ROADS = true;
+    window.WPConfig.ENABLE_AMENITIES_GROUND = true;
+    window.WPConfig.ENABLE_PODIUM = true;
+    window.WPConfig.ENABLE_TOWERS = true;
+    window.WPConfig.ENABLE_ROOFTOP_AMENITIES = true;
+    window.WPConfig.ENABLE_VEGETATION = true;
+
+    window.WPConfig.podiumStructure = true;
+    window.WPConfig.podiumGlass = true;
+    window.WPConfig.podiumRoof = true;
+
+    window.WPConfig.towerW1 = true;
+    window.WPConfig.towerW2 = true;
+    window.WPConfig.towerW3 = true;
+    window.WPConfig.towerBalcony = true;
+    window.WPConfig.towerAluminum = true;
+
+    // Helper: addBox có hỗ trợ lọc cắt lớp cao độ & dịch chuyển Z-Offset động
     function addBox(opts) {
         const {
             x, y, z, width, depth, height,
             color, metallic, roughness,
-            attributes, popup
+            heading,
+            attributes, popup,
+            type
         } = opts;
+
+        let drawZ = z;
+        let drawHeight = height;
+
+        // Áp dụng dịch chuyển độ cao Z-Offset theo tính chất cấu trúc
+        if (attributes && attributes.name) {
+            if (attributes.name.includes("Nền") || attributes.name.includes("đất") || attributes.name.includes("cỏ") || attributes.name.includes("Cột") || attributes.name.includes("Lõi")) {
+                drawZ += window.WPConfig.terrainZOffset;
+            } else if (attributes.name.includes("Đường") || attributes.name.includes("Vỉa hè") || attributes.name.includes("Lối đi") || attributes.name.includes("Dốc")) {
+                drawZ += window.WPConfig.roadsZOffset;
+            }
+        }
+
+        // Lọc cắt lớp cao độ thi công BIM (Capping)
+        const heightLimit = window.WPConfig.currentHeightLimit;
+        if (drawZ > heightLimit) {
+            return null; // Nằm hoàn toàn phía trên đường cắt giới hạn
+        }
+        if (drawZ + drawHeight > heightLimit) {
+            drawHeight = heightLimit - drawZ; // Cắt ngắn khối hộp
+            if (drawHeight < 0.05) return null; // Quá mỏng để hiển thị sạch sẽ
+        }
 
         const { longitude, latitude } = localToLngLat(x, y);
         const center = new Point({
             longitude: longitude,
             latitude: latitude,
-            z: z + height / 2,
+            z: drawZ, // Sử dụng drawZ làm gốc vì Mesh.createBox neo ở đáy của hộp (bottom center)
             spatialReference: { wkid: 4326 }
         });
 
         const mesh = Mesh.createBox(center, {
-            size: { width: width, depth: depth, height: height },
+            size: { width: width, depth: depth, height: drawHeight },
+            unit: "meters"
+        });
+
+        if (heading !== undefined && heading !== 0) {
+            mesh.rotate(0, 0, -heading);
+        }
+
+        const symbol = {
+            type: "mesh-3d",
+            symbolLayers: [
+                {
+                    type: "fill",
+                    material: {
+                        color: color,
+                        colorMixMode: "replace"
+                    },
+                    edges: null
+                }
+            ]
+        };
+
+        if (metallic !== undefined || roughness !== undefined) {
+            symbol.symbolLayers[0].material.metallic = metallic ?? 0;
+            symbol.symbolLayers[0].material.roughness = roughness ?? 0.8;
+        }
+
+        const g = new Graphic({
+            geometry: mesh,
+            symbol: symbol,
+            attributes: attributes || {},
+            popupTemplate: popup || null
+        });
+
+        layer.add(g);
+        return g;
+    }
+
+    // Helper: addCylinder có hỗ trợ lọc cắt lớp cao độ thi công BIM (Capping)
+    function addCylinder(opts) {
+        const {
+            x, y, z, radius, height,
+            color, metallic, roughness,
+            attributes, popup,
+            type
+        } = opts;
+
+        let drawZ = z;
+        let drawHeight = height;
+
+        // Lọc cắt lớp cao độ thi công BIM (Capping)
+        const heightLimit = window.WPConfig.currentHeightLimit;
+        if (drawZ > heightLimit) {
+            return null;
+        }
+        if (drawZ + drawHeight > heightLimit) {
+            drawHeight = heightLimit - drawZ;
+            if (drawHeight < 0.05) return null;
+        }
+
+        const { longitude, latitude } = localToLngLat(x, y);
+        const center = new Point({
+            longitude: longitude,
+            latitude: latitude,
+            z: drawZ, // Sử dụng drawZ làm gốc vì Mesh.createCylinder neo ở đáy của hình trụ (bottom center)
+            spatialReference: { wkid: 4326 }
+        });
+
+        const mesh = Mesh.createCylinder(center, {
+            size: { width: radius * 2, depth: radius * 2, height: drawHeight },
             unit: "meters"
         });
 
@@ -200,7 +319,6 @@ require([
             ]
         };
 
-        // PBR (metallic/roughness)
         if (metallic !== undefined || roughness !== undefined) {
             symbol.symbolLayers[0].material.metallic = metallic ?? 0;
             symbol.symbolLayers[0].material.roughness = roughness ?? 0.8;
@@ -217,254 +335,428 @@ require([
         return g;
     }
 
-    // Plaza
-    function buildPlaza(p) {
-        addBox({
-            x: 0, y: 0, z: -p.thickness,
-            width: p.width, depth: p.depth, height: p.thickness,
-            color: p.color, roughness: 0.95,
-            attributes: { name: "Sân plaza" }
-        });
-
-        p.walkways.forEach((w, i) => {
-            addBox({
-                x: w.x, y: w.y, z: 0.01,
-                width: w.w, depth: w.d, height: 0.05,
-                color: w.color, roughness: 0.9,
-                attributes: { name: "Lối đi " + (i + 1) }
-            });
-        });
-    }
-
-    // Podium
-    function buildPodium(p) {
-        const totalH = p.floors * p.floorHeight;
-        const podiumAttributes = {
-        id: p.id,
-        name: p.name,
-        floors: p.floors,
-        modeledHeight: p.modeledHeight || totalH,
-        usage: p.usage,
-        floorInfo: p.floorInfo,
-        mainFacilities: p.mainFacilities,
-        rooftopFacilities: p.rooftopFacilities,
-        parking: p.parking,
-        serviceRole: p.serviceRole,
-        note: p.note
-    };
-
-    const podiumPopup = {
-        title: "{name}",
-        content: [{
-            type: "fields",
-            fieldInfos: [
-                { fieldName: "id", label: "Mã khu" },
-                { fieldName: "floors", label: "Số tầng khối đế" },
-                { fieldName: "modeledHeight", label: "Chiều cao mô phỏng (m)" },
-                { fieldName: "usage", label: "Chức năng" },
-                { fieldName: "floorInfo", label: "Phân bổ tầng" },
-                { fieldName: "mainFacilities", label: "Tiện ích chính" },
-                { fieldName: "rooftopFacilities", label: "Tiện ích trên mái khối đế" },
-                { fieldName: "parking", label: "Bãi đỗ xe" },
-                { fieldName: "serviceRole", label: "Vai trò phục vụ" },
-                { fieldName: "note", label: "Ghi chú dữ liệu" }
-            ]
-        }]
-    };
-
-        addBox({
-            x: p.center.x, y: p.center.y, z: 0,
-            width: p.width, depth: p.depth, height: 1.2,
-            color: p.baseColor, roughness: 0.85,
-            attributes: podiumAttributes,
-            popup: podiumPopup
-        });
-
-        addBox({
-            x: p.center.x, y: p.center.y, z: 1.2,
-            width: p.width - 2, depth: p.depth - 2, height: totalH - 1.2,
-            color: p.glassColor, metallic: 0.4, roughness: 0.18,
-            attributes: podiumAttributes,
-            popup: podiumPopup
-        });
-
-        for (let f = 1; f <= p.floors; f++) {
-            const z = f * p.floorHeight - 0.3;
-            addBox({
-                x: p.center.x, y: p.center.y, z: z,
-                width: p.width + 0.6, depth: p.depth + 0.6, height: 0.6,
-                color: p.slabColor, roughness: 0.8
-            });
+    // Hàm vẽ lại toàn bộ mô hình (Reactive Redraw)
+    function redrawAll() {
+        layer.removeAll();
+        try {
+            if (window.WPModules && window.WPConfig) {
+                // Địa hình & Đường xá
+                if (window.WPConfig.ENABLE_ROADS && window.WPModules.buildPlaza) {
+                    window.WPModules.buildPlaza(data.plaza);
+                    if (window.WPModules.buildStreetlights) {
+                        window.WPModules.buildStreetlights(data.plaza);
+                    }
+                }
+                // Khối đế thương mại
+                if (window.WPConfig.ENABLE_PODIUM && window.WPModules.buildPodium) {
+                    window.WPModules.buildPodium(data.podium);
+                }
+                // Tiện ích tầng mái khối đế
+                if (window.WPConfig.ENABLE_ROOFTOP_AMENITIES && window.WPModules.buildRooftopAmenities) {
+                    const roofZ = window.WPConfig.ENABLE_PODIUM ? 25.20 : 2.90;
+                    window.WPModules.buildRooftopAmenities(data, roofZ);
+                }
+                // 3 Tòa tháp căn hộ
+                if (window.WPConfig.ENABLE_TOWERS && window.WPModules.buildTower) {
+                    data.towers.forEach(t => {
+                        let baseZ = 3.50; // Tòa West 3 độc lập ngồi trên footprint tầng 1 (Z: 3.50)
+                        if (t.id === "W1" || t.id === "W2") {
+                            baseZ = 2.70 + (data.podium.modeledHeight || 22.5); // Tòa West 1 & 2 ngồi trên mái khối đế chính (Z: 25.20)
+                        }
+                        window.WPModules.buildTower(t, baseZ);
+                    });
+                }
+                console.log("[VWP] Redraw success. Graphics count:", layer.graphics.length);
+            }
+        } catch (err) {
+            console.error("[VWP] Redraw error:", err);
         }
     }
 
-    // Tower
-    function buildTower(t) {
-        const cx = t.center.x;
-        const cy = t.center.y;
-        const totalH = t.modeledHeight || (t.floors * t.floorHeight);
-        const baseZ = 18;
-        const towerAttributes = {
-            id: t.id,
-            name: t.name,
-            floors: t.floors,
-            modeledHeight: t.modeledHeight,
-            basementFloors: t.basementFloors,
-            floorInfo: t.floorInfo,
-            units: t.units,
-            density: t.density,
-            elevators: t.elevators,
-            apartmentTypes: t.apartmentTypes,
-            areaRange: t.areaRange,
-            handoverStandard: t.handoverStandard,
-            deliveryTime: t.deliveryTime,
-            mainFace: t.mainFace
-        };
+    window.redrawAll = redrawAll;
+    window.localToLngLat = localToLngLat;
 
-        const towerPopup = {
-            title: "{name}",
-            content: [{
-                type: "fields",
-                fieldInfos: [
-                    { fieldName: "id", label: "Mã tòa" },
-                    { fieldName: "floors", label: "Số tầng nổi" },
-                    { fieldName: "modeledHeight", label: "Chiều cao mô phỏng (m)" },
-                    { fieldName: "basementFloors", label: "Số tầng hầm" },
-                    { fieldName: "floorInfo", label: "Phân bổ tầng" },
-                    { fieldName: "units", label: "Tổng số căn" },
-                    { fieldName: "density", label: "Mật độ căn hộ" },
-                    { fieldName: "elevators", label: "Thang máy" },
-                    { fieldName: "apartmentTypes", label: "Loại hình căn hộ" },
-                    { fieldName: "areaRange", label: "Diện tích căn hộ" },
-                    { fieldName: "handoverStandard", label: "Tiêu chuẩn bàn giao" },
-                    { fieldName: "deliveryTime", label: "Thời điểm bàn giao" },
-                    { fieldName: "mainFace", label: "Mặt chính" }
-                ]
-            }]
-        };
-        addBox({
-            x: cx, y: cy, z: baseZ,
-            width: t.width - 1.4, depth: t.depth - 1.4, height: totalH,
-            color: t.glassColor, metallic: 0.55, roughness: 0.15,
-            attributes: towerAttributes,
-            popup: towerPopup
-        });
+    window.WPEngine = {
+        addBox: addBox,
+        addCylinder: addCylinder,
+        layer: layer,
+        Mesh: Mesh,
+        Point: Point,
+        Graphic: Graphic,
+        WebStyleSymbol: WebStyleSymbol
+    };
 
-        // Slab
-        for (let f = 1; f <= t.floors; f++) {
-            const z = baseZ + f * t.floorHeight - 0.18;
-            addBox({
-                x: cx, y: cy, z: z,
-                width: t.width, depth: t.depth, height: 0.36,
-                color: t.slabColor, roughness: 0.85,
-                attributes: towerAttributes,
-                popup: towerPopup
+    // Vẽ mô hình lần đầu tiên
+    redrawAll();
+
+    // -----------------------------------------------------------------
+    // KHỞI TẠO BỘ LẮNG NGHE SỰ KIỆN GIAO DIỆN (UI Controller Events)
+    // -----------------------------------------------------------------
+    setupUIControls();
+
+    function setupUIControls() {
+        const heightSlider = document.getElementById("heightSlider");
+        const heightValue = document.getElementById("heightValue");
+
+        // 1. Slider điều chỉnh Mặt cắt Chiều cao
+        if (heightSlider && heightValue) {
+            heightSlider.addEventListener("input", function() {
+                const val = parseFloat(this.value);
+                heightValue.textContent = val + "m";
+                window.WPConfig.currentHeightLimit = val;
+                redrawAll();
             });
         }
 
-        // Pillar
-        const ps = 1.6;
-        [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sy]) => {
-            addBox({
-                x: cx + (sx * (t.width - ps)) / 2,
-                y: cy + (sy * (t.depth - ps)) / 2,
-                z: baseZ,
-                width: ps, depth: ps, height: totalH,
-                color: t.pillarColor, roughness: 0.75,
-                attributes: towerAttributes,
-                popup: towerPopup
+        // 2. Nút Quét thi công tự động (Auto construction animation sweep)
+        let playInterval = null;
+        const btnAutoPlay = document.getElementById("btnAutoPlay");
+        if (btnAutoPlay) {
+            btnAutoPlay.addEventListener("click", function() {
+                if (playInterval) {
+                    // Đang chạy -> Tạm dừng
+                    clearInterval(playInterval);
+                    playInterval = null;
+                    this.textContent = "► Quét thi công tự động";
+                    this.classList.remove("playing");
+                } else {
+                    // Đang dừng -> Chạy
+                    this.textContent = "⏸ Tạm dừng quét";
+                    this.classList.add("playing");
+                    if (parseFloat(heightSlider.value) >= 160) {
+                        heightSlider.value = 0;
+                    }
+                    playInterval = setInterval(() => {
+                        let val = parseFloat(heightSlider.value);
+                        val += 2;
+                        if (val > 160) {
+                            val = 160;
+                            clearInterval(playInterval);
+                            playInterval = null;
+                            btnAutoPlay.textContent = "► Quét thi công tự động";
+                            btnAutoPlay.classList.remove("playing");
+                        }
+                        heightSlider.value = val;
+                        heightValue.textContent = val + "m";
+                        window.WPConfig.currentHeightLimit = val;
+                        redrawAll();
+                    }, 45);
+                }
             });
+        }
+
+        // 3. Nút Reset về trạng thái mặc định đầy đủ
+        const btnReset = document.getElementById("btnReset");
+        if (btnReset) {
+            btnReset.addEventListener("click", function() {
+                if (playInterval) {
+                    clearInterval(playInterval);
+                    playInterval = null;
+                    btnAutoPlay.textContent = "► Quét thi công tự động";
+                    btnAutoPlay.classList.remove("playing");
+                }
+                heightSlider.value = 160;
+                heightValue.textContent = "160m";
+                window.WPConfig.currentHeightLimit = 160;
+                
+                // Trả toàn bộ checkbox về trạng thái checked
+                document.querySelectorAll("#controlPanel input[type=checkbox]").forEach(chk => {
+                    if (chk.id !== "chkNightMode") {
+                        chk.checked = true;
+                        window.WPConfig[getCheckboxConfigKey(chk.id)] = true;
+                    } else {
+                        chk.checked = false;
+                    }
+                });
+
+                // Reset Z-Offset
+                window.WPConfig.terrainZOffset = -0.30;
+                window.WPConfig.roadsZOffset = 0.00;
+                document.getElementById("valTerrainOffset").textContent = "-0.30m";
+                document.getElementById("valRoadOffset").textContent = "0.00m";
+
+                // Đưa hướng camera ban ngày về mặc định
+                view.environment.lighting.date = new Date("2026-05-06T09:30:00+07:00");
+                view.environment.lighting.directShadowsEnabled = true;
+
+                redrawAll();
+            });
+        }
+
+        // Helper maps checkbox id with WPConfig key
+        function getCheckboxConfigKey(id) {
+            const keys = {
+                chkTerrain: "ENABLE_TERRAIN",
+                chkRoads: "ENABLE_ROADS",
+                chkAmenitiesGround: "ENABLE_AMENITIES_GROUND",
+                chkPodium: "ENABLE_PODIUM",
+                chkPodiumStructure: "podiumStructure",
+                chkPodiumGlass: "podiumGlass",
+                chkPodiumRoof: "podiumRoof",
+                chkTowers: "ENABLE_TOWERS",
+                chkTowerW1: "towerW1",
+                chkTowerW2: "towerW2",
+                chkTowerW3: "towerW3",
+                chkTowerBalcony: "towerBalcony",
+                chkTowerAluminum: "towerAluminum",
+                chkRooftopAmenities: "ENABLE_ROOFTOP_AMENITIES",
+                chkVegetation: "ENABLE_VEGETATION"
+            };
+            return keys[id] || null;
+        }
+
+        // Gắn sự kiện Change cho tất cả Checkboxes và đồng bộ ban đầu
+        const checkboxes = document.querySelectorAll("#controlPanel input[type=checkbox]");
+        checkboxes.forEach(chk => {
+            const key = getCheckboxConfigKey(chk.id);
+            if (key) {
+                // Đồng bộ trạng thái UI với WPConfig ban đầu
+                if (window.WPConfig[key] !== undefined) {
+                    chk.checked = window.WPConfig[key];
+                }
+                chk.addEventListener("change", function() {
+                    window.WPConfig[key] = this.checked;
+                    redrawAll();
+                });
+            }
         });
 
-        // Mullion
-        // Mullion theo mặt chính của từng tòa
-        const mc = 8;
-        const mainFace = t.mainFace || "bottom";
+        // 4. Chế độ Ban đêm (Night mode - Lighting)
+        const chkNightMode = document.getElementById("chkNightMode");
+        if (chkNightMode) {
+            // Lưu trữ màu sắc ban ngày ban đầu
+            const originalColors = {
+                residential_glass: [...window.WPMaterials.residential_glass.color],
+                commercial_glass: [...window.WPMaterials.commercial_glass.color],
+                pool_water: [...window.WPMaterials.pool_water.color],
+                wood_deck: [...window.WPMaterials.wood_deck.color],
+                white_aluminum: [...window.WPMaterials.white_aluminum.color],
+                light_concrete: [...window.WPMaterials.light_concrete.color]
+            };
 
-        if (mainFace === "top" || mainFace === "bottom") {
-            const sideY = mainFace === "top" ? 1 : -1;
+            chkNightMode.addEventListener("change", function() {
+                // Giữ nguyên Bản đồ nền OSM sáng rõ để xung quanh không bị tối đen
+                view.map.basemap = "osm";
 
-            for (let i = 1; i < mc; i++) {
-                const fx = -t.width / 2 + (i * t.width) / mc;
+                if (this.checked) {
+                    // Chuyển thời gian về đêm hẳn (7:30 Tối - 19:30) để trời tối đen có sao, đèn đường BẬT SÁNG RỰC RỠ
+                    view.environment.lighting.date = new Date("2026-05-06T19:30:00+07:00"); 
+                    
+                    // Kích hoạt cameraTrackingEnabled = true để biến camera thành một đèn pha (headlight) khổng lồ chiếu trực diện
+                    // vào tòa nhà, giúp tòa nhà luôn sáng bừng rực rỡ từ mọi góc nhìn, triệt tiêu mọi bóng tối u ám!
+                    view.environment.lighting.cameraTrackingEnabled = true;
+                    view.environment.lighting.directShadowsEnabled = false; // Loại bỏ bóng đổ tối đen rườm rà
 
-                addBox({
-                    x: cx + fx,
-                    y: cy + sideY * t.depth / 2,
-                    z: baseZ,
-                    width: 0.7,
-                    depth: 0.45,
-                    height: totalH,
-                    color: t.pillarColor,
-                    roughness: 0.75,
-                    attributes: {
-                        ...towerAttributes,
-                        partName: `Mullion mặt chính ${t.id}`,
-                        partType: "Mullion"
-                    },
-                    popup: towerPopup
+                    // Màu kính và tiện ích phát sáng cực đại
+                    window.WPMaterials.residential_glass.color = [255, 235, 10, 1.0];   // Kính vàng ròng sáng rực
+                    window.WPMaterials.commercial_glass.color = [255, 250, 150, 1.0];  // Khối đế bật đèn thương mại sáng trưng
+                    window.WPMaterials.pool_water.color = [0, 255, 255, 1.0];           // Bể bơi xanh neon cực rực rỡ
+                    window.WPMaterials.wood_deck.color = [100, 70, 50, 1];              // Sàn gỗ sáng ấm áp
+                    
+                    window.WPMaterials.white_aluminum.color = [255, 255, 255, 1.0];     // Viền nhôm sáng trắng phản chiếu đèn cực mạnh
+                    window.WPMaterials.light_concrete.color = [255, 255, 255, 1.0];     // Bê tông cột sáng sủa rõ ràng
+                } else {
+                    view.environment.lighting.date = new Date("2026-05-06T09:30:00+07:00"); // 9:30 Sáng (Ánh nắng ban mai)
+                    view.environment.lighting.cameraTrackingEnabled = false; // Trả về góc chiếu mặt trời thực tế ban ngày
+                    view.environment.lighting.directShadowsEnabled = true;
+
+                    // Khôi phục màu sắc ban ngày gốc
+                    window.WPMaterials.residential_glass.color = [...originalColors.residential_glass];
+                    window.WPMaterials.commercial_glass.color = [...originalColors.commercial_glass];
+                    window.WPMaterials.pool_water.color = [...originalColors.pool_water];
+                    window.WPMaterials.wood_deck.color = [...originalColors.wood_deck];
+                    window.WPMaterials.white_aluminum.color = [...originalColors.white_aluminum];
+                    window.WPMaterials.light_concrete.color = [...originalColors.light_concrete];
+                }
+                // Vẽ lại toàn bộ mô hình để cập nhật hiệu ứng ánh sáng đèn đêm rực rỡ
+                redrawAll();
+            });
+        }
+
+        // 5. Stepper Z-Offset chỉnh khoảng cách cao độ
+        setupStepper("btnTerrainMinus", "btnTerrainPlus", "valTerrainOffset", "terrainZOffset", -0.05);
+        setupStepper("btnRoadMinus", "btnRoadPlus", "valRoadOffset", "roadsZOffset", 0.05);
+
+        function setupStepper(minusId, plusId, valueId, configKey, step) {
+            const btnMinus = document.getElementById(minusId);
+            const btnPlus = document.getElementById(plusId);
+            const valEl = document.getElementById(valueId);
+
+            if (btnMinus && btnPlus && valEl) {
+                btnMinus.addEventListener("click", function() {
+                    window.WPConfig[configKey] = parseFloat((window.WPConfig[configKey] - Math.abs(step)).toFixed(2));
+                    valEl.textContent = (window.WPConfig[configKey] >= 0 ? "+" : "") + window.WPConfig[configKey].toFixed(2) + "m";
+                    redrawAll();
+                });
+                btnPlus.addEventListener("click", function() {
+                    window.WPConfig[configKey] = parseFloat((window.WPConfig[configKey] + Math.abs(step)).toFixed(2));
+                    valEl.textContent = (window.WPConfig[configKey] >= 0 ? "+" : "") + window.WPConfig[configKey].toFixed(2) + "m";
+                    redrawAll();
                 });
             }
         }
 
-        if (mainFace === "left" || mainFace === "right") {
-            const sideX = mainFace === "right" ? 1 : -1;
+        // 6. BIM Construction Phase Buttons (Phân giai đoạn thi công nhanh)
+        const phaseBtns = document.querySelectorAll(".phase-btn");
+        phaseBtns.forEach(btn => {
+            btn.addEventListener("click", function() {
+                phaseBtns.forEach(b => b.classList.remove("highlighted"));
+                this.classList.add("highlighted");
 
-            for (let i = 1; i < mc; i++) {
-                const fy = -t.depth / 2 + (i * t.depth) / mc;
+                const phase = parseInt(this.getAttribute("data-phase"));
+                
+                if (phase === 1) {
+                    // 1. Nền & Đường (Chỉ hiện địa hình, đường xá)
+                    setBIMStates({
+                        currentHeightLimit: 5,
+                        ENABLE_TERRAIN: true, ENABLE_ROADS: true, ENABLE_AMENITIES_GROUND: false,
+                        ENABLE_PODIUM: false, ENABLE_TOWERS: false, ENABLE_ROOFTOP_AMENITIES: false, ENABLE_VEGETATION: false
+                    });
+                } else if (phase === 2) {
+                    // 2. Khối đế (Cắt ở tầng 4 khối đế Z: 23m)
+                    setBIMStates({
+                        currentHeightLimit: 23,
+                        ENABLE_TERRAIN: true, ENABLE_ROADS: true, ENABLE_AMENITIES_GROUND: true,
+                        ENABLE_PODIUM: true, podiumStructure: true, podiumGlass: true, podiumRoof: true,
+                        ENABLE_TOWERS: false, ENABLE_ROOFTOP_AMENITIES: false, ENABLE_VEGETATION: false
+                    });
+                } else if (phase === 3) {
+                    // 3. Khung tháp (Vẽ tháp không nhôm/không logia kính để tạo bộ xương bê tông cốt thép cốt lõi)
+                    setBIMStates({
+                        currentHeightLimit: 110,
+                        ENABLE_TERRAIN: true, ENABLE_ROADS: true, ENABLE_AMENITIES_GROUND: true,
+                        ENABLE_PODIUM: true, podiumStructure: true, podiumGlass: false, podiumRoof: true,
+                        ENABLE_TOWERS: true, towerW1: true, towerW2: true, towerW3: true,
+                        towerBalcony: false, towerAluminum: false, ENABLE_ROOFTOP_AMENITIES: false, ENABLE_VEGETATION: false
+                    });
+                } else if (phase === 4) {
+                    // 4. Vỏ kính (Vách kính & thanh nhôm nổi bật)
+                    setBIMStates({
+                        currentHeightLimit: 110,
+                        ENABLE_TERRAIN: true, ENABLE_ROADS: true, ENABLE_AMENITIES_GROUND: true,
+                        ENABLE_PODIUM: true, podiumStructure: true, podiumGlass: true, podiumRoof: true,
+                        ENABLE_TOWERS: true, towerW1: true, towerW2: true, towerW3: true,
+                        towerBalcony: true, towerAluminum: true, ENABLE_ROOFTOP_AMENITIES: false, ENABLE_VEGETATION: false
+                    });
+                } else if (phase === 5) {
+                    // 5. Đỉnh tháp (Mái, thang máy, ăng-ten Z: 140m)
+                    setBIMStates({
+                        currentHeightLimit: 140,
+                        ENABLE_TERRAIN: true, ENABLE_ROADS: true, ENABLE_AMENITIES_GROUND: true,
+                        ENABLE_PODIUM: true, podiumStructure: true, podiumGlass: true, podiumRoof: true,
+                        ENABLE_TOWERS: true, towerW1: true, towerW2: true, towerW3: true,
+                        towerBalcony: true, towerAluminum: true, ENABLE_ROOFTOP_AMENITIES: false, ENABLE_VEGETATION: false
+                    });
+                } else if (phase === 6) {
+                    // 6. Tiện ích mái (Rooftop pool & gardens)
+                    setBIMStates({
+                        currentHeightLimit: 160,
+                        ENABLE_TERRAIN: true, ENABLE_ROADS: true, ENABLE_AMENITIES_GROUND: true,
+                        ENABLE_PODIUM: true, podiumStructure: true, podiumGlass: true, podiumRoof: true,
+                        ENABLE_TOWERS: true, towerW1: true, towerW2: true, towerW3: true,
+                        towerBalcony: true, towerAluminum: true, ENABLE_ROOFTOP_AMENITIES: true, ENABLE_VEGETATION: false
+                    });
+                } else if (phase === 7) {
+                    // 7. Cảnh quan (Hàng cây tầng trệt)
+                    setBIMStates({
+                        currentHeightLimit: 160,
+                        ENABLE_TERRAIN: true, ENABLE_ROADS: true, ENABLE_AMENITIES_GROUND: true,
+                        ENABLE_PODIUM: true, podiumStructure: true, podiumGlass: true, podiumRoof: true,
+                        ENABLE_TOWERS: true, towerW1: true, towerW2: true, towerW3: true,
+                        towerBalcony: true, towerAluminum: true, ENABLE_ROOFTOP_AMENITIES: true, ENABLE_VEGETATION: true
+                    });
+                } else if (phase === 8) {
+                    // 8. Ánh sáng (Night mode!)
+                    chkNightMode.checked = !chkNightMode.checked;
+                    chkNightMode.dispatchEvent(new Event("change"));
+                }
+            });
+        });
 
-                addBox({
-                    x: cx + sideX * t.width / 2,
-                    y: cy + fy,
-                    z: baseZ,
-                    width: 0.45,
-                    depth: 0.7,
-                    height: totalH,
-                    color: t.pillarColor,
-                    roughness: 0.75,
-                    attributes: {
-                        ...towerAttributes,
-                        partName: `Mullion mặt chính ${t.id}`,
-                        partType: "Mullion"
-                    },
-                    popup: towerPopup
-                });
+        function setBIMStates(states) {
+            for (let key in states) {
+                window.WPConfig[key] = states[key];
+                
+                // Đồng bộ check box trực quan
+                const chkId = getCheckboxIdFromKey(key);
+                if (chkId) {
+                    const chk = document.getElementById(chkId);
+                    if (chk) chk.checked = states[key];
+                }
             }
+
+            // Cập nhật thanh trượt slider chiều cao
+            if (states.currentHeightLimit !== undefined) {
+                heightSlider.value = states.currentHeightLimit;
+                heightValue.textContent = states.currentHeightLimit + "m";
+            }
+
+            redrawAll();
         }
 
-        // Crown
-        addBox({
-            x: cx, y: cy, z: baseZ + totalH,
-            width: t.width - 6, depth: t.depth - 6, height: t.mechanicalHeight,
-            color: t.crownColor, roughness: 0.7
-        });
-        addBox({
-            x: cx, y: cy, z: baseZ + totalH + t.mechanicalHeight - 0.5,
-            width: t.width - 4, depth: t.depth - 4, height: 0.6,
-            color: [120, 125, 132, 1], roughness: 0.6
-        });
+        function getCheckboxIdFromKey(key) {
+            const mapKeys = {
+                ENABLE_TERRAIN: "chkTerrain",
+                ENABLE_ROADS: "chkRoads",
+                ENABLE_AMENITIES_GROUND: "chkAmenitiesGround",
+                ENABLE_PODIUM: "chkPodium",
+                podiumStructure: "chkPodiumStructure",
+                podiumGlass: "chkPodiumGlass",
+                podiumRoof: "chkPodiumRoof",
+                ENABLE_TOWERS: "chkTowers",
+                towerW1: "chkTowerW1",
+                towerW2: "chkTowerW2",
+                towerW3: "chkTowerW3",
+                towerBalcony: "chkTowerBalcony",
+                towerAluminum: "chkTowerAluminum",
+                ENABLE_ROOFTOP_AMENITIES: "chkRooftopAmenities",
+                ENABLE_VEGETATION: "chkVegetation"
+            };
+            return mapKeys[key] || null;
+        }
 
-        // Antenna
-        addBox({
-            x: cx, y: cy, z: baseZ + totalH + t.mechanicalHeight,
-            width: 1.0, depth: 1.0, height: t.antennaHeight,
-            color: [80, 85, 92, 1], metallic: 0.7, roughness: 0.3
-        });
-        addBox({
-            x: cx, y: cy,
-            z: baseZ + totalH + t.mechanicalHeight + t.antennaHeight,
-            width: 0.4, depth: 0.4, height: 8,
-            color: [50, 55, 60, 1], metallic: 0.8, roughness: 0.2
+        // 7. ArcGIS Click Event & BIM Selection Readout (Xem dữ liệu kỹ thuật công trình khi click vào mô hình 3D)
+        view.on("click", (event) => {
+            view.hitTest(event).then((response) => {
+                const results = response.results;
+                const selectionBox = document.getElementById("selectionReadout");
+                
+                if (results.length > 0 && results[0].graphic) {
+                    const graphic = results[0].graphic;
+                    const attr = graphic.attributes;
+                    
+                    if (attr && attr.name) {
+                        selectionBox.classList.add("active");
+                        
+                        let html = `<div class="readout-field"><span class="readout-label">Tên phần tử:</span><span class="readout-value" style="color:#00f2fe">${attr.name}</span></div>`;
+                        
+                        if (attr.id) {
+                            html += `<div class="readout-field"><span class="readout-label">Mã phân khu:</span><span class="readout-value">${attr.id}</span></div>`;
+                        }
+                        if (attr.floors) {
+                            html += `<div class="readout-field"><span class="readout-label">Số tầng nổi:</span><span class="readout-value">${attr.floors} tầng</span></div>`;
+                        }
+                        if (attr.modeledHeight) {
+                            html += `<div class="readout-field"><span class="readout-label">Chiều cao:</span><span class="readout-value">${attr.modeledHeight}m</span></div>`;
+                        }
+                        if (attr.floorInfo) {
+                            html += `<div class="readout-field"><span class="readout-label">Phân bổ:</span><span class="readout-value" style="font-size:10px">${attr.floorInfo}</span></div>`;
+                        }
+                        if (attr.units) {
+                            html += `<div class="readout-field"><span class="readout-label">Tổng số căn:</span><span class="readout-value">${attr.units} căn hộ</span></div>`;
+                        }
+                        
+                        selectionBox.innerHTML = html;
+                    } else {
+                        selectionBox.classList.remove("active");
+                        selectionBox.textContent = "Click vào mô hình 3D để quét và hiển thị dữ liệu kỹ thuật công trình";
+                    }
+                } else {
+                    selectionBox.classList.remove("active");
+                    selectionBox.textContent = "Click vào mô hình 3D để quét và hiển thị dữ liệu kỹ thuật công trình";
+                }
+            });
         });
     }
-
-    // Build all
-    try {
-        buildPlaza(data.plaza);
-        buildPodium(data.podium);
-        data.towers.forEach(buildTower);
-        console.log("[VWP] Built", layer.graphics.length, "graphics");
-    } catch (err) {
-        console.error("[VWP] Build error:", err);
-    }
-
 });
+
