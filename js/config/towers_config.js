@@ -1,0 +1,87 @@
+// js/config/towers_config.js
+window.WP_TOWERS_CONFIG = [
+    {
+        id: "W3",
+        name: "Tòa West 3 - Vinhomes West Point",
+        center: { x: -69, y: 0 },
+        width: 18,
+        depth: 50,
+        mainFace: "right",
+        floors: 35,
+        modeledHeight: 35 * 3.3,
+        floorHeight: 3.3,
+        basementFloors: 3,
+
+        floorInfo: "Tầng 1: Sảnh Lounge & shop thương mại; Tầng 2-35: Căn hộ chung cư",
+        units: 442,
+        density: "14 căn hộ/mặt sàn",
+        elevators: "7 thang thường + 1 thang hàng",
+        apartmentTypes: "Studio, 2PN, 3PN, 4PN",
+        areaRange: "35.6 - 139.1 m²",
+        handoverStandard: "Liền tường",
+        deliveryTime: "Tháng 4/2020",
+
+        mechanicalHeight: 6,
+        antennaHeight: 10,
+        glassColor: [15, 25, 40, 0.85],
+        slabColor: [210, 215, 220, 1],
+        pillarColor: [180, 185, 190, 1],
+        crownColor: [150, 155, 160, 1]
+    },
+    {
+        id: "W2",
+        name: "Tòa West 2 - Vinhomes West Point",
+        center: { x: 12.5, y: 28 },
+        width: 75,
+        depth: 20,
+        mainFace: "bottom",
+        floors: 39,
+        modeledHeight: 39 * 3.3,
+        floorHeight: 3.3,
+        basementFloors: 3,
+
+        floorInfo: "Tầng 1: Sảnh Lounge & shop thương mại; Tầng 2-4: Trung tâm thương mại & Officetel; Tầng 5-37: Căn hộ chung cư; Tầng 38-39: Căn hộ Duplex",
+        units: 452,
+        density: "Tầng 5-18: 12 căn hộ/mặt sàn; Tầng 19-39: 13 căn hộ/mặt sàn",
+        elevators: "7 thang thường + 1 thang hàng",
+        apartmentTypes: "Studio, 2PN, 3PN, 4PN, Duplex",
+        areaRange: "39.7 - 285.2 m²",
+        handoverStandard: "Liền tường",
+        deliveryTime: "Tháng 4/2020",
+
+        mechanicalHeight: 6,
+        antennaHeight: 10,
+        glassColor: [15, 25, 40, 0.85],
+        slabColor: [210, 215, 220, 1],
+        pillarColor: [180, 185, 190, 1],
+        crownColor: [150, 155, 160, 1]
+    },
+    {
+        id: "W1",
+        name: "Tòa West 1 - Vinhomes West Point",
+        center: { x: 17.5, y: -28 },
+        width: 65,
+        depth: 20,
+        mainFace: "top",
+        floors: 38,
+        modeledHeight: 38 * 3.3,
+        floorHeight: 3.3,
+        basementFloors: 3,
+
+        floorInfo: "Tầng 1: Sảnh Lounge & shop thương mại; Tầng 2-4: Trung tâm thương mại & Officetel; Tầng 5-37: Officetel; Tầng 38: Căn hộ Duplex",
+        units: 407,
+        density: "Tầng 5-37: 11 căn hộ/mặt sàn; Tầng 38: 13 căn hộ/mặt sàn",
+        elevators: "7 thang thường + 1 thang hàng",
+        apartmentTypes: "Studio, 2PN, 3PN, 4PN, Duplex",
+        areaRange: "35.9 - 221.8 m²",
+        handoverStandard: "Liền tường",
+        deliveryTime: "Tháng 4/2020",
+
+        mechanicalHeight: 6,
+        antennaHeight: 10,
+        glassColor: [15, 25, 40, 0.85],
+        slabColor: [210, 215, 220, 1],
+        pillarColor: [180, 185, 190, 1],
+        crownColor: [150, 155, 160, 1]
+    }
+];
