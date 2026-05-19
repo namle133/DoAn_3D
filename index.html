@@ -11,6 +11,200 @@
 <body>
     <div id="viewDiv"></div>
 
+    <!-- BẢNG ĐIỀU KHIỂN GIS / BIM 3D GLASSMORPHISM -->
+    <div id="controlPanel">
+        <div class="panel-header">
+            <div class="header-indicator"></div>
+            <div class="header-text">
+                <div class="main-title">VINHOMES WEST POINT</div>
+                <div class="sub-title">BẢNG ĐIỀU KHIỂN GIS / BIM 3D</div>
+            </div>
+        </div>
+
+        <div class="panel-scroll-container">
+            <!-- 01. CẮT LỚP CHIỀU CAO & THI CÔNG -->
+            <div class="panel-section">
+                <div class="section-title"><span>|</span> 01 CẮT LỚP CHIỀU CAO & THI CÔNG</div>
+                
+                <div class="control-row height-slider-container">
+                    <div class="slider-labels">
+                        <span class="label-text">Mặt cắt chiều cao:</span>
+                        <span id="heightValue" class="value-highlight">160m</span>
+                    </div>
+                    <input type="range" id="heightSlider" min="0" max="160" value="160" step="1" />
+                    <div class="slider-limits">
+                        <span>0m (Móng)</span>
+                        <span>160m (Ăng-ten)</span>
+                    </div>
+                </div>
+
+                <div class="construction-actions">
+                    <button id="btnAutoPlay" class="btn-primary">► Quét thi công tự động</button>
+                    <button id="btnReset" class="btn-icon" title="Reset về mặc định">⟲</button>
+                </div>
+
+                <div class="phase-selector-grid">
+                    <button class="phase-btn active" data-phase="1">1. Nền & Đường</button>
+                    <button class="phase-btn active" data-phase="2">2. Khối đế</button>
+                    <button class="phase-btn active" data-phase="3">3. Khung tháp</button>
+                    <button class="phase-btn active" data-phase="4">4. Vỏ kính</button>
+                    <button class="phase-btn active" data-phase="5">5. Đỉnh tháp</button>
+                    <button class="phase-btn active" data-phase="6">6. Tiện ích mái</button>
+                    <button class="phase-btn active" data-phase="7">7. Cảnh quan</button>
+                    <button class="phase-btn active" data-phase="8">8. Ánh sáng</button>
+                </div>
+            </div>
+
+            <!-- 02. QUẢN LÝ LỚP DỮ LIỆU -->
+            <div class="panel-section">
+                <div class="section-title"><span>|</span> 02 QUẢN LÝ LỚP DỮ LIỆU</div>
+                
+                <div class="layer-item">
+                    <span class="layer-label">Địa hình & Nền móng</span>
+                    <label class="switch">
+                        <input type="checkbox" id="chkTerrain" checked />
+                        <span class="switch-slider"></span>
+                    </label>
+                </div>
+
+                <div class="layer-item">
+                    <span class="layer-label">Đường xá & Lối đi</span>
+                    <label class="switch">
+                        <input type="checkbox" id="chkRoads" checked />
+                        <span class="switch-slider"></span>
+                    </label>
+                </div>
+
+                <div class="layer-item">
+                    <span class="layer-label">Cảnh quan Sân vườn</span>
+                    <label class="switch">
+                        <input type="checkbox" id="chkAmenitiesGround" checked />
+                        <span class="switch-slider"></span>
+                    </label>
+                </div>
+
+                <!-- Khối đế thương mại -->
+                <div class="layer-group">
+                    <div class="layer-item">
+                        <span class="layer-label">Khối đế Thương mại</span>
+                        <label class="switch">
+                            <input type="checkbox" id="chkPodium" checked />
+                            <span class="switch-slider"></span>
+                        </label>
+                    </div>
+                    <div class="sub-checkboxes">
+                        <label class="checkbox-container">
+                            <input type="checkbox" id="chkPodiumStructure" checked />
+                            <span class="checkmark"></span>
+                            Kết cấu cốt đế
+                        </label>
+                        <label class="checkbox-container">
+                            <input type="checkbox" id="chkPodiumGlass" checked />
+                            <span class="checkmark"></span>
+                            Mặt vách kính đế
+                        </label>
+                        <label class="checkbox-container">
+                            <input type="checkbox" id="chkPodiumRoof" checked />
+                            <span class="checkmark"></span>
+                            Sàn mái tầng 4
+                        </label>
+                    </div>
+                </div>
+
+                <!-- 3 Tòa tháp căn hộ -->
+                <div class="layer-group">
+                    <div class="layer-item">
+                        <span class="layer-label">3 Tòa tháp căn hộ</span>
+                        <label class="switch">
+                            <input type="checkbox" id="chkTowers" checked />
+                            <span class="switch-slider"></span>
+                        </label>
+                    </div>
+                    <div class="sub-checkboxes">
+                        <label class="checkbox-container">
+                            <input type="checkbox" id="chkTowerW1" checked />
+                            <span class="checkmark"></span>
+                            Tháp West 1 (Hỗn hợp)
+                        </label>
+                        <label class="checkbox-container">
+                            <input type="checkbox" id="chkTowerW2" checked />
+                            <span class="checkmark"></span>
+                            Tháp West 2 (Căn hộ)
+                        </label>
+                        <label class="checkbox-container">
+                            <input type="checkbox" id="chkTowerW3" checked />
+                            <span class="checkmark"></span>
+                            Tháp West 3 (Căn hộ)
+                        </label>
+                        <label class="checkbox-container">
+                            <input type="checkbox" id="chkTowerBalcony" checked />
+                            <span class="checkmark"></span>
+                            Hệ ban công căn hộ
+                        </label>
+                        <label class="checkbox-container">
+                            <input type="checkbox" id="chkTowerAluminum" checked />
+                            <span class="checkmark"></span>
+                            Thanh nẹp nhôm vỏ kính
+                        </label>
+                    </div>
+                </div>
+
+                <div class="layer-item">
+                    <span class="layer-label">Tiện ích Tầng mái (18m)</span>
+                    <label class="switch">
+                        <input type="checkbox" id="chkRooftopAmenities" checked />
+                        <span class="switch-slider"></span>
+                    </label>
+                </div>
+
+                <div class="layer-item">
+                    <span class="layer-label">Hệ thống Cây xanh</span>
+                    <label class="switch">
+                        <input type="checkbox" id="chkVegetation" checked />
+                        <span class="switch-slider"></span>
+                    </label>
+                </div>
+
+                <div class="layer-item">
+                    <span class="layer-label">Chế độ Ban đêm (Night)</span>
+                    <label class="switch">
+                        <input type="checkbox" id="chkNightMode" />
+                        <span class="switch-slider"></span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- 04. ĐIỀU CHỈNH ĐỘ CAO Z-OFFSET -->
+            <div class="panel-section">
+                <div class="section-title"><span>|</span> 04 ĐIỀU CHỈNH ĐỘ CAO Z-OFFSET</div>
+                <div class="offset-control">
+                    <span class="offset-label">Nền & Địa hình:</span>
+                    <div class="offset-stepper">
+                        <button class="btn-step" id="btnTerrainMinus">-</button>
+                        <span id="valTerrainOffset" class="offset-value">-0.30m</span>
+                        <button class="btn-step" id="btnTerrainPlus">+</button>
+                    </div>
+                </div>
+                <div class="offset-control">
+                    <span class="offset-label">Đường xá & Lối đi:</span>
+                    <div class="offset-stepper">
+                        <button class="btn-step" id="btnRoadMinus">-</button>
+                        <span id="valRoadOffset" class="offset-value">0.00m</span>
+                        <button class="btn-step" id="btnRoadPlus">+</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 03. THÔNG TIN PHÂN KHU CHỌN -->
+            <div class="panel-section">
+                <div class="section-title"><span>|</span> 03 THÔNG TIN PHÂN KHU CHỌN</div>
+                <div id="selectionReadout" class="selection-readout-box">
+                    Click vào mô hình 3D để quét và hiển thị dữ liệu kỹ thuật công trình
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- La bàn lớn ở góc dưới-phải, có thể click để quay về hướng Bắc -->
     <div id="northArrow" title="Click để quay về hướng Bắc">
         <div class="compass-inner">
@@ -29,7 +223,22 @@
     </div>
 
     <script src="https://js.arcgis.com/4.30/"></script>
-    <script src="./js/buildings.js"></script>
-    <script src="./js/app.js"></script>
+    
+    <!-- Cấu hình và Data -->
+    <script src="./js/config/settings.js?v=30"></script>
+    <script src="./js/config/towers_config.js?v=30"></script>
+    <script src="./js/config/podium_config.js?v=30"></script>
+    <script src="./js/config/plaza_config.js?v=30"></script>
+    <script src="./js/materials/materials.js?v=30"></script>
+    <script src="./js/buildings.js?v=30"></script>
+    
+    <!-- Các Module Kiến trúc & Cảnh quan -->
+    <script src="./js/roads/outer_roads.js?v=30"></script>
+    <script src="./js/podium/podium_structure.js?v=30"></script>
+    <script src="./js/towers/tower_generator.js?v=30"></script>
+    <script src="./js/rooftop_amenities/amenities_manager.js?v=30"></script>
+
+    <!-- Core Engine -->
+    <script src="./js/app.js?v=30"></script>
 </body>
 </html>
