@@ -23,9 +23,8 @@ require([
     Compass, ScaleBar, Expand, BasemapGallery, Home, Fullscreen
 ) {
     const data = window.SITE_DATA;
-
-    const SITE_LNG = 105.78375;
-    const SITE_LAT = 21.01266;
+    const SITE_LNG = 105.78548;
+    const SITE_LAT = 21.01148 ;
     const M_PER_DEG_LAT = 110940;
     const M_PER_DEG_LNG = 111320 * Math.cos((SITE_LAT * Math.PI) / 180);
 
@@ -43,15 +42,15 @@ require([
     });
 
     // SceneView - Căn chỉnh góc nhìn camera gần hơn, tập trung chính xác vào tâm dự án (0, 0)
-    const homePos = localToLngLat(140, -140); // Đưa vị trí camera gần hơn nhiều
+    const homePos = localToLngLat(230, -290); // Đưa vị trí camera gần hơn nhiều
     const HOME_VIEWPOINT = {
         position: {
             longitude: homePos.longitude,
             latitude: homePos.latitude,
-            z: 220 // Độ cao Z thấp hơn (220m thay vì 750m) để nhìn cận cảnh chi tiết sắc nét cực đẹp
+            z: 370 // Độ cao Z thấp hơn (220m thay vì 750m) để nhìn cận cảnh chi tiết sắc nét cực đẹp
         },
         heading: 315, // Hướng nhìn từ Đông Nam chếch sang Tây Bắc
-        tilt: 60 // Độ nghiêng 60 độ lý tưởng để ngắm toàn cảnh 3D nổi bật
+        tilt: 50 // Độ nghiêng 60 độ lý tưởng để ngắm toàn cảnh 3D nổi bật
     };
 
     const view = new SceneView({
