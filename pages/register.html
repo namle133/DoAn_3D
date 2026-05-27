@@ -647,8 +647,10 @@
         };
 
         await authManager.register(registerData);
-        showSuccess('Đăng ký thành công! Đang chuyển hướng...');
-        setTimeout(() => authManager.redirectToDashboard(), 1500);
+        showSuccess('Đăng ký thành công! Chuyển hướng đến trang đăng nhập...');
+        setTimeout(() => {
+          window.location.href = '/pages/login.html';
+        }, 1500);
       } catch (err) {
         showError(err.message || 'Đăng ký thất bại');
         submitBtn.disabled = false;

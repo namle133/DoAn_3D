@@ -472,11 +472,12 @@
 
       try {
         const result = await authManager.login(email, password);
-        if (result.success) {
+        // Check if login was successful (API returns token on success)
+        if (result && (result.token || result.data?.token)) {
           showSuccess('Đăng nhập thành công! Chuyển hướng...');
           setTimeout(() => authManager.redirectToDashboard(), 1500);
         } else {
-          showError(result.error || 'Đăng nhập thất bại');
+          showError(result?.error || result?.message || 'Đăng nhập thất bại');
         }
       } catch (error) {
         showError(error.message || 'Lỗi kết nối server');
