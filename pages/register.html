@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Đăng ký - Vinhomes</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+      min-height: 100vh;
+      padding: 40px 20px;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      width: 400px;
+      height: 400px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 50%;
+      top: -100px;
+      right: -100px;
+      animation: float 6s ease-in-out infinite;
+      z-index: 0;
+    }
+
+    body::after {
+      content: '';
+      position: fixed;
+      width: 300px;
+      height: 300px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 50%;
+      bottom: -50px;
+      left: -50px;
+      animation: float 8s ease-in-out infinite;
+      z-index: 0;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(20px); }
+    }
+
+    .register-wrapper {
+      max-width: 600px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 1;
+    }
+
+    .register-box {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      padding: 45px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      animation: slideUp 0.5s ease-out;
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(40px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .register-header {
+      text-align: center;
+      margin-bottom: 35px;
+    }
+
+    .logo-icon {
+      font-size: 48px;
+      color: #667eea;
+      margin-bottom: 12px;
+      animation: bounce 2s ease-in-out infinite;
+    }
+
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+
+    .register-box h1 {
+      text-align: center;
+      margin-bottom: 8px;
+      font-size: 32px;
+      color: #333;
+      font-weight: 700;
+    }
+
+    .register-box .sub {
+      text-align: center;
+      color: #999;
+      font-size: 13px;
+      margin-bottom: 24px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 28px 0 18px 0;
+      font-size: 15px;
+      color: #667eea;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .section-title i {
+      font-size: 18px;
+    }
+
+    .section-title:first-of-type {
+      margin-top: 0;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .form-grid.full {
+      grid-template-columns: 1fr;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+    }
+
+    label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 8px;
+      color: #555;
+      font-weight: 600;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    label i {
+      color: #667eea;
+      width: 14px;
+      font-size: 14px;
+    }
+
+    label .required {
+      color: #e74c3c;
+      font-size: 16px;
+    }
+
+    input[type='text'],
+    input[type='email'],
+    input[type='password'],
+    input[type='tel'],
+    input[type='date'],
+    select,
+    textarea {
+      padding: 12px 14px;
+      border: 2px solid #e8e8e8;
+      border-radius: 10px;
+      font-size: 14px;
+      transition: all 0.3s ease;
+      font-family: inherit;
+      background: rgba(255, 255, 255, 0.8);
+    }
+
+    input[type='text']:focus,
+    input[type='email']:focus,
+    input[type='password']:focus,
+    input[type='tel']:focus,
+    input[type='date']:focus,
+    select:focus,
+    textarea:focus {
+      outline: none;
+      border-color: #667eea;
+      background: white;
+      box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+    }
+
+    input::placeholder,
+    textarea::placeholder {
+      color: #bbb;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 70px;
+    }
+
+    .alert {
+      padding: 12px 16px;
+      border-radius: 10px;
+      margin-bottom: 24px;
+      display: none;
+      animation: slideDown 0.3s ease-out;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .alert-error {
+      background: #fee;
+      color: #c33;
+      border-left: 4px solid #c33;
+    }
+
+    .alert-error i {
+      color: #c33;
+    }
+
+    .alert-success {
+      background: #efe;
+      color: #3c3;
+      border-left: 4px solid #3c3;
+    }
+
+    .alert-success i {
+      color: #3c3;
+    }
+
+    .btn {
+      padding: 14px 24px;
+      border: none;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .btn-primary {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+      margin-top: 20px;
+      font-size: 15px;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 30px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-primary:active {
+      transform: translateY(0);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .form-divider {
+      display: flex;
+      align-items: center;
+      margin: 28px 0;
+      color: #ddd;
+      gap: 12px;
+    }
+
+    .form-divider span {
+      flex: 1;
+      height: 1px;
+      background: #ddd;
+    }
+
+    .login-link {
+      text-align: center;
+      margin-top: 24px;
+      font-size: 14px;
+      color: #666;
+    }
+
+    .login-link a {
+      color: #667eea;
+      font-weight: 600;
+      text-decoration: none;
+      transition: color 0.3s;
+    }
+
+    .login-link a:hover {
+      color: #764ba2;
+      text-decoration: underline;
+    }
+
+    .field-hint {
+      font-size: 12px;
+      color: #999;
+      margin-top: 4px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .field-hint i {
+      font-size: 11px;
+    }
+
+    @media (max-width: 600px) {
+      .register-box {
+        padding: 30px 20px;
+      }
+
+      .form-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+
+      .register-box h1 {
+        font-size: 24px;
+      }
+
+      .logo-icon {
+        font-size: 40px;
+      }
+
+      body::before {
+        width: 250px;
+        height: 250px;
+      }
+
+      body::after {
+        width: 200px;
+        height: 200px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="register-wrapper">
+    <div class="register-box">
+      <div class="register-header">
+        <div class="logo-icon"><i class="fas fa-building"></i></div>
+        <h1>Vinhomes</h1>
+        <p class="sub">Đăng ký tài khoản cư dân</p>
+      </div>
+
+      <div class="alert alert-error" id="errorMsg">
+        <i class="fas fa-exclamation-circle"></i>
+        <span id="errorText"></span>
+      </div>
+      <div class="alert alert-success" id="successMsg">
+        <i class="fas fa-check-circle"></i>
+        <span id="successText"></span>
+      </div>
+
+      <form id="registerForm">
+        <!-- Mã xác thực -->
+        <div class="section-title">
+          <i class="fas fa-key"></i> Xác Thực
+        </div>
+        <div class="form-grid full">
+          <div class="form-group">
+            <label for="verifyCode"><i class="fas fa-fingerprint"></i> Mã Xác Thực <span class="required">*</span></label>
+            <input type="text" id="verifyCode" placeholder="Mã được cấp khi ký hợp đồng" required />
+            <div class="field-hint"><i class="fas fa-info-circle"></i> Bạn sẽ nhận được mã này từ phòng bán hàng</div>
+          </div>
+        </div>
+
+        <!-- Tài khoản -->
+        <div class="section-title">
+          <i class="fas fa-user-circle"></i> Tài Khoản
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="username"><i class="fas fa-user"></i> Tên Đăng Nhập <span class="required">*</span></label>
+            <input type="text" id="username" placeholder="username" required />
+          </div>
+          <div class="form-group">
+            <label for="email"><i class="fas fa-envelope"></i> Email <span class="required">*</span></label>
+            <input type="email" id="email" placeholder="email@example.com" required />
+          </div>
+        </div>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="password"><i class="fas fa-lock"></i> Mật Khẩu <span class="required">*</span></label>
+            <input type="password" id="password" placeholder="Tối thiểu 6 ký tự" required />
+          </div>
+          <div class="form-group">
+            <label for="confirmPassword"><i class="fas fa-lock"></i> Xác Nhận Mật Khẩu <span class="required">*</span></label>
+            <input type="password" id="confirmPassword" placeholder="Nhập lại mật khẩu" required />
+          </div>
+        </div>
+
+        <!-- Thông Tin Cá Nhân -->
+        <div class="section-title">
+          <i class="fas fa-id-card"></i> Thông Tin Cá Nhân
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="fullName"><i class="fas fa-user-tie"></i> Họ Tên Đầy Đủ <span class="required">*</span></label>
+            <input type="text" id="fullName" placeholder="Nguyễn Văn A" required />
+          </div>
+          <div class="form-group">
+            <label for="idCard"><i class="fas fa-passport"></i> CCCD/CMND <span class="required">*</span></label>
+            <input type="text" id="idCard" placeholder="001234567890" maxlength="12" required />
+          </div>
+        </div>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="dateOfBirth"><i class="fas fa-birthday-cake"></i> Ngày Sinh <span class="required">*</span></label>
+            <input type="date" id="dateOfBirth" required />
+          </div>
+          <div class="form-group">
+            <label for="gender"><i class="fas fa-venus-mars"></i> Giới Tính <span class="required">*</span></label>
+            <select id="gender" required>
+              <option value="">-- Chọn giới tính --</option>
+              <option value="M">Nam</option>
+              <option value="F">Nữ</option>
+              <option value="O">Khác</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="phoneNumber"><i class="fas fa-phone"></i> Số Điện Thoại <span class="required">*</span></label>
+            <input type="tel" id="phoneNumber" placeholder="0123456789" required />
+          </div>
+        </div>
+
+        <div class="form-grid full">
+          <div class="form-group">
+            <label for="permanentAddress"><i class="fas fa-home"></i> Địa Chỉ Thường Trú <span class="required">*</span></label>
+            <textarea id="permanentAddress" placeholder="Nhập địa chỉ đầy đủ (số nhà, đường, quận, thành phố)..." required></textarea>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary" id="submitBtn">
+          <i class="fas fa-user-plus"></i> Đăng Ký
+        </button>
+      </form>
+
+      <p class="login-link">
+        Đã có tài khoản? <a href="/pages/login.html">Đăng nhập ngay</a>
+      </p>
+    </div>
+  </div>
+
+  <script type="module">
+    import authManager from '../js/modules/auth-manager.js';
+    import { validateEmail, validatePassword } from '../js/utils/validators.js';
+
+    if (authManager.isAuthenticated()) authManager.redirectToDashboard();
+
+    const form = document.getElementById('registerForm');
+    const errorMsg = document.getElementById('errorMsg');
+    const errorText = document.getElementById('errorText');
+    const successMsg = document.getElementById('successMsg');
+    const successText = document.getElementById('successText');
+    const submitBtn = document.getElementById('submitBtn');
+
+    // Validation functions
+    function validateIDCard(idCard) {
+      const cleaned = idCard.replace(/\D/g, '');
+      if (cleaned.length < 9 || cleaned.length > 12) {
+        return { valid: false, error: 'CCCD/CMND phải từ 9-12 chữ số' };
+      }
+      return { valid: true };
+    }
+
+    function validatePhoneNumber(phone) {
+      const cleaned = phone.replace(/\D/g, '');
+      if (cleaned.length < 10) {
+        return { valid: false, error: 'Số điện thoại không hợp lệ (tối thiểu 10 chữ số)' };
+      }
+      return { valid: true };
+    }
+
+    function validateDateOfBirth(dateStr) {
+      const date = new Date(dateStr);
+      const today = new Date();
+      const age = today.getFullYear() - date.getFullYear();
+      
+      if (isNaN(date.getTime())) {
+        return { valid: false, error: 'Ngày sinh không hợp lệ' };
+      }
+      if (date > today) {
+        return { valid: false, error: 'Ngày sinh không thể là ngày tương lai' };
+      }
+      if (age < 18) {
+        return { valid: false, error: 'Phải từ 18 tuổi trở lên' };
+      }
+      if (age > 120) {
+        return { valid: false, error: 'Ngày sinh không hợp lệ' };
+      }
+      return { valid: true };
+    }
+
+    function validateFullName(name) {
+      const trimmed = name.trim();
+      if (trimmed.length < 2) {
+        return { valid: false, error: 'Họ tên phải có ít nhất 2 ký tự' };
+      }
+      if (trimmed.length > 100) {
+        return { valid: false, error: 'Họ tên không quá 100 ký tự' };
+      }
+      return { valid: true };
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorMsg.style.display = 'none';
+      successMsg.style.display = 'none';
+
+      // Collect all fields
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      const confirm = document.getElementById('confirmPassword').value;
+      const username = document.getElementById('username').value.trim();
+      const verifyCode = document.getElementById('verifyCode').value.trim();
+      const fullName = document.getElementById('fullName').value.trim();
+      const idCard = document.getElementById('idCard').value.trim();
+      const dateOfBirth = document.getElementById('dateOfBirth').value;
+      const gender = document.getElementById('gender').value;
+      const phoneNumber = document.getElementById('phoneNumber').value.trim();
+      const permanentAddress = document.getElementById('permanentAddress').value.trim();
+
+      // Validation
+      if (!validateEmail(email).valid) {
+        errorText.textContent = 'Email không hợp lệ';
+        errorMsg.style.display = 'flex';
+        return;
+      }
+
+      if (!validatePassword(password).valid) {
+        errorText.textContent = validatePassword(password).error;
+        errorMsg.style.display = 'flex';
+        return;
+      }
+
+      if (password !== confirm) {
+        errorText.textContent = 'Mật khẩu xác nhận không khớp';
+        errorMsg.style.display = 'flex';
+        return;
+      }
+
+      if (!username || username.length < 3) {
+        errorText.textContent = 'Tên đăng nhập phải có ít nhất 3 ký tự';
+        errorMsg.style.display = 'flex';
+        return;
+      }
+
+      const fullNameVal = validateFullName(fullName);
+      if (!fullNameVal.valid) {
+        errorText.textContent = fullNameVal.error;
+        errorMsg.style.display = 'flex';
+        return;
+      }
+
+      const idCardVal = validateIDCard(idCard);
+      if (!idCardVal.valid) {
+        errorText.textContent = idCardVal.error;
+        errorMsg.style.display = 'flex';
+        return;
+      }
+
+      const dobVal = validateDateOfBirth(dateOfBirth);
+      if (!dobVal.valid) {
+        errorText.textContent = dobVal.error;
+        errorMsg.style.display = 'flex';
+        return;
+      }
+
+      if (!gender) {
+        errorText.textContent = 'Vui lòng chọn giới tính';
+        errorMsg.style.display = 'flex';
+        return;
+      }
+
+      const phoneVal = validatePhoneNumber(phoneNumber);
+      if (!phoneVal.valid) {
+        errorText.textContent = phoneVal.error;
+        errorMsg.style.display = 'flex';
+        return;
+      }
+
+      if (!permanentAddress || permanentAddress.length < 5) {
+        errorText.textContent = 'Địa chỉ thường trú phải có ít nhất 5 ký tự';
+        errorMsg.style.display = 'flex';
+        return;
+      }
+
+      document.getElementById('submitBtn').disabled = true;
+      try {
+        // Prepare data to send
+        const registerData = {
+          username,
+          email,
+          password,
+          verify_code: verifyCode,
+          role: 'resident',
+          // Resident info
+          full_name: fullName,
+          id_card: idCard,
+          date_of_birth: dateOfBirth,
+          gender,
+          phone_number: phoneNumber,
+          permanent_address: permanentAddress,
+        };
+
+        await authManager.register(registerData);
+        successText.textContent = 'Đăng ký thành công! Đang chuyển hướng...';
+        successMsg.style.display = 'flex';
+        setTimeout(() => authManager.redirectToDashboard(), 1500);
+      } catch (err) {
+        errorText.textContent = err.message || 'Đăng ký thất bại';
+        errorMsg.style.display = 'flex';
+        document.getElementById('submitBtn').disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
