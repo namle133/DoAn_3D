@@ -1,0 +1,1390 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quản lý Hóa đơn - Vinhomes Property Management</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f5f5f5;
+      color: #333;
+    }
+
+    .navbar {
+      background: white;
+      border-bottom: 1px solid #ddd;
+      padding: 15px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    .navbar-left {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .logo {
+      font-size: 20px;
+      font-weight: bold;
+      color: #667eea;
+      cursor: pointer;
+    }
+
+    .nav-menu {
+      display: flex;
+      gap: 30px;
+      list-style: none;
+    }
+
+    .nav-menu a {
+      color: #666;
+      text-decoration: none;
+      font-size: 14px;
+      transition: color 0.3s;
+      cursor: pointer;
+    }
+
+    .nav-menu a:hover,
+    .nav-menu a.active {
+      color: #667eea;
+      font-weight: 600;
+    }
+
+    .navbar-right {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .user-info {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      font-size: 13px;
+    }
+
+    .user-info .name {
+      font-weight: 600;
+      color: #333;
+    }
+
+    .user-info .role {
+      color: #999;
+      font-size: 12px;
+    }
+
+    .avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 16px;
+    }
+
+    .logout-btn {
+      background: #f44336;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: background 0.3s;
+    }
+
+    .logout-btn:hover {
+      background: #d32f2f;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+
+    .page-title {
+      font-size: 28px;
+      font-weight: bold;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn-primary {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.3s;
+    }
+
+    .btn-primary:hover {
+      background: #764ba2;
+    }
+
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-bottom: 25px;
+    }
+
+    .kpi-card {
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    .kpi-label {
+      color: #999;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+
+    .kpi-value {
+      font-size: 24px;
+      font-weight: bold;
+      color: #333;
+    }
+
+    .filters-bar {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    .search-input {
+      flex: 1;
+      min-width: 200px;
+      padding: 10px 15px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      font-size: 14px;
+    }
+
+    .filter-select {
+      padding: 10px 15px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      font-size: 14px;
+      background: white;
+      cursor: pointer;
+    }
+
+    .section {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    .section-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 15px;
+    }
+
+    .table-responsive {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th {
+      background: #f9f9f9;
+      padding: 12px;
+      text-align: left;
+      font-size: 13px;
+      font-weight: 600;
+      color: #666;
+      border-bottom: 2px solid #eee;
+    }
+
+    td {
+      padding: 12px;
+      border-bottom: 1px solid #eee;
+      font-size: 14px;
+    }
+
+    tr:hover {
+      background: #fafafa;
+    }
+
+    tr.overdue {
+      background-color: #fff5f5;
+    }
+
+    tr.overdue:hover {
+      background-color: #ffe6e6;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .status-draft {
+      background: #e3f2fd;
+      color: #1976d2;
+    }
+
+    .status-issued {
+      background: #f3e5f5;
+      color: #7b1fa2;
+    }
+
+    .status-overdue {
+      background: #ffebee;
+      color: #c62828;
+    }
+
+    .status-paid {
+      background: #e8f5e9;
+      color: #2e7d32;
+    }
+
+    .status-cancelled {
+      background: #f5f5f5;
+      color: #666;
+      text-decoration: line-through;
+    }
+
+    .action-btns {
+      display: flex;
+      gap: 5px;
+      flex-wrap: wrap;
+    }
+
+    .btn-sm {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: background 0.3s;
+    }
+
+    .btn-sm:hover {
+      background: #764ba2;
+    }
+
+    .btn-sm.danger {
+      background: #f44336;
+    }
+
+    .btn-sm.danger:hover {
+      background: #d32f2f;
+    }
+
+    .btn-sm.success {
+      background: #4CAF50;
+    }
+
+    .btn-sm.success:hover {
+      background: #45a049;
+    }
+
+    .btn-sm:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: #999;
+    }
+
+    .empty-state-icon {
+      font-size: 48px;
+      margin-bottom: 15px;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 40px 20px;
+      color: #999;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 2px solid #f3f3f3;
+      border-top: 2px solid #667eea;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-right: 10px;
+    }
+
+    @keyframes spin {
+      0% {
+        transform: rotate(0deg);
+      }
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      overflow-y: auto;
+      padding: 20px;
+    }
+
+    .modal.show {
+      display: flex;
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: 8px;
+      padding: 30px;
+      width: 90%;
+      max-width: 600px;
+      max-height: 90vh;
+      overflow-y: auto;
+      margin: auto;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .modal-header h2 {
+      font-size: 20px;
+      font-weight: 600;
+    }
+
+    .close-btn {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: #999;
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 500;
+      font-size: 14px;
+    }
+
+    .form-group.required label::after {
+      content: ' *';
+      color: #f44336;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      font-size: 14px;
+      font-family: inherit;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .form-group textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+    }
+
+    .form-buttons {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 20px;
+    }
+
+    .btn-cancel {
+      background: #999;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    .btn-cancel:hover {
+      background: #777;
+    }
+
+    .line-items {
+      background: #f9f9f9;
+      padding: 15px;
+      border-radius: 5px;
+      margin-bottom: 15px;
+    }
+
+    .line-item {
+      display: grid;
+      grid-template-columns: 1fr 100px 100px 30px;
+      gap: 10px;
+      margin-bottom: 10px;
+      align-items: center;
+    }
+
+    .line-item input {
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 3px;
+      font-size: 13px;
+    }
+
+    .line-item-remove {
+      background: #f44336;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .line-item-total {
+      font-weight: 600;
+      text-align: right;
+      padding: 10px;
+      background: white;
+      border-radius: 3px;
+    }
+
+    .btn-add-item {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 8px 15px;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 12px;
+      margin-top: 10px;
+    }
+
+    .btn-add-item:hover {
+      background: #764ba2;
+    }
+
+    .error-alert {
+      background: #ffebee;
+      color: #c62828;
+      padding: 15px;
+      border-radius: 5px;
+      margin-bottom: 20px;
+      display: none;
+    }
+
+    .error-alert.show {
+      display: block;
+    }
+
+    .form-error {
+      color: #f44336;
+      font-size: 12px;
+      margin-top: 3px;
+    }
+
+    @media (max-width: 768px) {
+      .navbar {
+        flex-direction: column;
+        gap: 15px;
+      }
+
+      .nav-menu {
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .filters-bar {
+        flex-direction: column;
+      }
+
+      .search-input {
+        min-width: auto;
+      }
+
+      .kpi-grid {
+        grid-template-columns: 1fr;
+      }
+
+      table {
+        font-size: 12px;
+      }
+
+      td,
+      th {
+        padding: 8px;
+      }
+
+      .action-btns {
+        flex-direction: column;
+      }
+
+      .btn-sm {
+        width: 100%;
+      }
+
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+
+      .line-item {
+        grid-template-columns: 1fr;
+      }
+
+      .modal-content {
+        width: 95%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Navigation -->
+  <nav class="navbar">
+    <div class="navbar-left">
+      <div class="logo" onclick="window.location.href='/pages/dashboard.html'">🏢 Vinhomes</div>
+      <ul class="nav-menu">
+        <li><a href="/pages/dashboard.html">Dashboard</a></li>
+        <li><a href="/pages/residents.html">Cư dân</a></li>
+        <li><a href="/pages/contracts.html">Hợp đồng</a></li>
+        <li><a href="/pages/invoices.html" class="active">Hóa đơn</a></li>
+      </ul>
+    </div>
+    <div class="navbar-right">
+      <div class="user-info">
+        <div class="name" id="userName">Đang tải...</div>
+        <div class="role" id="userRole">-</div>
+      </div>
+      <div class="avatar" id="userAvatar">-</div>
+      <button class="logout-btn" id="logoutBtn">Đăng xuất</button>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="container">
+    <!-- Error Alert -->
+    <div class="error-alert" id="errorAlert"></div>
+
+    <!-- Page Header -->
+    <div class="page-header">
+      <h1 class="page-title">Quản lý Hóa đơn</h1>
+      <div class="header-actions">
+        <button class="btn-primary" id="addInvoiceBtn">+ Tạo hóa đơn</button>
+      </div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="kpi-grid" id="kpiGrid">
+      <div class="kpi-card">
+        <div class="kpi-label">Tổng doanh thu</div>
+        <div class="kpi-value" id="totalRevenue">-</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Quá hạn</div>
+        <div class="kpi-value" id="overdueAmount">-</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Đã thanh toán</div>
+        <div class="kpi-value" id="paidAmount">-</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Tổng hóa đơn</div>
+        <div class="kpi-value" id="totalInvoices">-</div>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters-bar">
+      <input
+        type="text"
+        id="searchInput"
+        class="search-input"
+        placeholder="Tìm kiếm số hóa đơn hoặc tên cư dân..."
+      />
+      <select id="statusFilter" class="filter-select">
+        <option value="">Tất cả trạng thái</option>
+        <option value="draft">Nháp</option>
+        <option value="issued">Đã phát hành</option>
+        <option value="overdue">Quá hạn</option>
+        <option value="paid">Đã thanh toán</option>
+        <option value="cancelled">Hủy bỏ</option>
+      </select>
+    </div>
+
+    <!-- Invoices Table -->
+    <div class="section">
+      <div class="section-title">Danh sách hóa đơn</div>
+      <div class="table-responsive" id="invoicesContainer">
+        <div class="loading">
+          <div class="spinner"></div>
+          <p>Đang tải dữ liệu...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create/Edit Invoice Modal -->
+  <div class="modal" id="invoiceModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="invoiceModalTitle">Tạo hóa đơn</h2>
+        <button class="close-btn" id="closeInvoiceModalBtn">&times;</button>
+      </div>
+      <form id="invoiceForm">
+        <div class="error-alert" id="invoiceFormError"></div>
+
+        <div class="form-row">
+          <div class="form-group required">
+            <label for="resident">Cư dân</label>
+            <select id="resident" name="resident" required>
+              <option value="">-- Chọn cư dân --</option>
+            </select>
+          </div>
+          <div class="form-group required">
+            <label for="apartment">Căn hộ</label>
+            <select id="apartment" name="apartment" required>
+              <option value="">-- Chọn căn hộ --</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group required">
+            <label for="invoiceDate">Ngày tạo</label>
+            <input type="date" id="invoiceDate" name="invoiceDate" required />
+          </div>
+          <div class="form-group required">
+            <label for="dueDate">Hạn thanh toán</label>
+            <input type="date" id="dueDate" name="dueDate" required />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Các hạng mục</label>
+          <div class="line-items" id="lineItemsContainer">
+            <!-- Line items will be added here -->
+          </div>
+          <button type="button" class="btn-add-item" id="addLineItemBtn">+ Thêm hạng mục</button>
+        </div>
+
+        <div class="form-group">
+          <label for="invoiceDescription">Ghi chú</label>
+          <textarea
+            id="invoiceDescription"
+            name="invoiceDescription"
+            placeholder="Ghi chú hay mô tả về hóa đơn..."
+          ></textarea>
+        </div>
+
+        <div style="background: #f9f9f9; padding: 15px; border-radius: 5px; margin-bottom: 15px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong>Tổng tiền:</strong>
+            <span id="invoiceTotalDisplay" style="font-size: 18px; font-weight: bold; color: #667eea;">
+              ₫ 0
+            </span>
+          </div>
+        </div>
+
+        <div class="form-buttons">
+          <button type="button" class="btn-cancel" id="cancelInvoiceBtn">Hủy</button>
+          <button type="submit" class="btn-primary">Lưu hóa đơn</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Record Payment Modal -->
+  <div class="modal" id="paymentModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Ghi nhận thanh toán</h2>
+        <button class="close-btn" id="closePaymentModalBtn">&times;</button>
+      </div>
+      <form id="paymentForm">
+        <div class="error-alert" id="paymentFormError"></div>
+
+        <div class="form-group">
+          <label>Số hóa đơn</label>
+          <input type="text" id="paymentInvoiceNumber" readonly style="background: #f5f5f5;" />
+        </div>
+
+        <div class="form-group">
+          <label>Số tiền phải thanh toán</label>
+          <input type="text" id="paymentAmount" readonly style="background: #f5f5f5;" />
+        </div>
+
+        <div class="form-row">
+          <div class="form-group required">
+            <label for="paymentMethod">Phương thức thanh toán</label>
+            <select id="paymentMethod" name="paymentMethod" required>
+              <option value="">-- Chọn phương thức --</option>
+              <option value="cash">Tiền mặt</option>
+              <option value="bank_transfer">Chuyển khoản</option>
+              <option value="check">Séc</option>
+              <option value="online">Thanh toán trực tuyến</option>
+            </select>
+          </div>
+          <div class="form-group required">
+            <label for="paymentDate">Ngày thanh toán</label>
+            <input type="date" id="paymentDate" name="paymentDate" required />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group required">
+            <label for="paymentPaid">Số tiền thanh toán</label>
+            <input type="number" id="paymentPaid" name="paymentPaid" min="0" step="1000" required />
+          </div>
+          <div class="form-group">
+            <label for="paymentReference">Mã tham chiếu</label>
+            <input type="text" id="paymentReference" name="paymentReference" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="paymentNotes">Ghi chú</label>
+          <textarea id="paymentNotes" name="paymentNotes" placeholder="Ghi chú về thanh toán..."></textarea>
+        </div>
+
+        <div class="form-buttons">
+          <button type="button" class="btn-cancel" id="cancelPaymentBtn">Hủy</button>
+          <button type="submit" class="btn-primary">Ghi nhận thanh toán</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script type="module">
+    import authManager from '../js/modules/auth-manager.js';
+    import invoiceAPI from '../js/api/invoices.js';
+    import residentAPI from '../js/api/residents.js';
+    import buildingAPI from '../js/api/buildings.js';
+    import { formatDate, formatCurrency, showToast, debounce } from '../js/utils/helpers.js';
+    import { INVOICE_STATUS, ROLES } from '../js/utils/constants.js';
+
+    // Guard route
+    authManager.guardRoute();
+
+    // State
+    let currentUser = null;
+    let currentRole = null;
+    let allInvoices = [];
+    let allResidents = [];
+    let allApartments = [];
+    let filteredInvoices = [];
+    let editingInvoiceId = null;
+    let lineItemsData = [];
+
+    // Initialize
+    async function init() {
+      try {
+        currentUser = authManager.getCurrentUser();
+        currentRole = authManager.getUserRole();
+
+        // Set user info
+        const roleLabels = {
+          admin: 'Quản trị viên',
+          manager: 'Ban quản lý',
+          staff: 'Nhân viên',
+          resident: 'Cư dân',
+        };
+
+        document.getElementById('userName').textContent = currentUser?.name || 'User';
+        document.getElementById('userRole').textContent = roleLabels[currentRole] || currentRole;
+        document.getElementById('userAvatar').textContent = (currentUser?.name || 'U')[0].toUpperCase();
+
+        // Logout
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+          if (confirm('Bạn có chắc chắn muốn đăng xuất?')) {
+            authManager.logout();
+          }
+        });
+
+        // Load data
+        await Promise.all([loadInvoices(), loadResidents(), loadApartments()]);
+
+        // Setup event listeners
+        setupEventListeners();
+
+        // Update KPIs
+        updateKPIs();
+      } catch (error) {
+        console.error('Error initializing:', error);
+        showToast(`Lỗi: ${error.message}`, 'error');
+      }
+    }
+
+    function setupEventListeners() {
+      // Add invoice button
+      document.getElementById('addInvoiceBtn').addEventListener('click', openAddInvoiceModal);
+
+      // Close modals
+      document.getElementById('closeInvoiceModalBtn').addEventListener('click', closeInvoiceModal);
+      document.getElementById('closePaymentModalBtn').addEventListener('click', closePaymentModal);
+      document.getElementById('cancelInvoiceBtn').addEventListener('click', closeInvoiceModal);
+      document.getElementById('cancelPaymentBtn').addEventListener('click', closePaymentModal);
+
+      // Modal click outside
+      document.getElementById('invoiceModal').addEventListener('click', (e) => {
+        if (e.target === document.getElementById('invoiceModal')) closeInvoiceModal();
+      });
+      document.getElementById('paymentModal').addEventListener('click', (e) => {
+        if (e.target === document.getElementById('paymentModal')) closePaymentModal();
+      });
+
+      // Search and filter
+      document.getElementById('searchInput').addEventListener(
+        'input',
+        debounce(() => filterInvoices(), 300)
+      );
+      document.getElementById('statusFilter').addEventListener('change', filterInvoices);
+
+      // Invoice form
+      document.getElementById('invoiceForm').addEventListener('submit', handleCreateInvoice);
+      document.getElementById('addLineItemBtn').addEventListener('click', addLineItem);
+      document.getElementById('resident').addEventListener('change', onResidentChange);
+      document.getElementById('invoiceDate').addEventListener('change', updateLineItemTotals);
+
+      // Payment form
+      document.getElementById('paymentForm').addEventListener('submit', handleRecordPayment);
+      document.getElementById('paymentPaid').addEventListener('change', updatePaymentStatus);
+
+      // Initialize with first line item
+      resetInvoiceForm();
+    }
+
+    async function loadInvoices() {
+      try {
+        const response = await invoiceAPI.getInvoices();
+        allInvoices = response.data || [];
+        renderInvoices(allInvoices);
+      } catch (error) {
+        console.error('Error loading invoices:', error);
+        showToast(`Lỗi tải hóa đơn: ${error.message}`, 'error');
+      }
+    }
+
+    async function loadResidents() {
+      try {
+        const response = await residentAPI.getResidents();
+        allResidents = response.data || [];
+        populateResidentDropdown();
+      } catch (error) {
+        console.error('Error loading residents:', error);
+        showToast(`Lỗi tải cư dân: ${error.message}`, 'error');
+      }
+    }
+
+    async function loadApartments() {
+      try {
+        const response = await buildingAPI.getApartments();
+        allApartments = response.data || [];
+      } catch (error) {
+        console.error('Error loading apartments:', error);
+        showToast(`Lỗi tải căn hộ: ${error.message}`, 'error');
+      }
+    }
+
+    function populateResidentDropdown() {
+      const select = document.getElementById('resident');
+      select.innerHTML = '<option value="">-- Chọn cư dân --</option>';
+      allResidents.forEach((resident) => {
+        const option = document.createElement('option');
+        option.value = resident.id;
+        option.textContent = resident.name;
+        select.appendChild(option);
+      });
+    }
+
+    function populateApartmentDropdown(residentsResidenceApartments = []) {
+      const select = document.getElementById('apartment');
+      select.innerHTML = '<option value="">-- Chọn căn hộ --</option>';
+
+      let apartments = residentsResidenceApartments.length > 0 ? residentsResidenceApartments : allApartments;
+
+      apartments.forEach((apt) => {
+        const option = document.createElement('option');
+        option.value = apt.id;
+        option.textContent = apt.apartment_number || apt.name || apt.id;
+        select.appendChild(option);
+      });
+    }
+
+    function onResidentChange() {
+      const residentId = document.getElementById('resident').value;
+      if (!residentId) {
+        populateApartmentDropdown([]);
+        return;
+      }
+
+      const resident = allResidents.find((r) => r.id === residentId);
+      const residenceApartments = resident && resident.residences ? resident.residences : [];
+      populateApartmentDropdown(residenceApartments);
+    }
+
+    function renderInvoices(invoices) {
+      const container = document.getElementById('invoicesContainer');
+
+      if (invoices.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">📋</div>
+            <p>Không có hóa đơn nào</p>
+          </div>
+        `;
+        return;
+      }
+
+      const overdue = new Date();
+      overdue.setDate(overdue.getDate() - 1);
+
+      container.innerHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th>Số hóa đơn</th>
+              <th>Cư dân</th>
+              <th>Căn hộ</th>
+              <th>Số tiền</th>
+              <th>Hạn thanh toán</th>
+              <th>Trạng thái</th>
+              <th>Ngày thanh toán</th>
+              <th>Thao tác</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${invoices
+              .map((invoice) => {
+                const isOverdue =
+                  invoice.status !== INVOICE_STATUS.PAID &&
+                  invoice.status !== INVOICE_STATUS.CANCELLED &&
+                  new Date(invoice.due_date) < overdue;
+                return `
+              <tr ${isOverdue ? 'class="overdue"' : ''}>
+                <td><strong>${invoice.invoice_number}</strong></td>
+                <td>${invoice.resident_name}</td>
+                <td>${invoice.apartment_number}</td>
+                <td>${formatCurrency(invoice.total_amount)}</td>
+                <td>${formatDate(invoice.due_date)}</td>
+                <td>
+                  <span class="status-badge status-${invoice.status}">
+                    ${getStatusLabel(invoice.status)}
+                  </span>
+                </td>
+                <td>${invoice.payment_date ? formatDate(invoice.payment_date) : '-'}</td>
+                <td>
+                  <div class="action-btns">
+                    <button class="btn-sm" onclick="window.invoiceApp.viewInvoice('${invoice.id}')">Xem</button>
+                    ${invoice.status !== INVOICE_STATUS.PAID && invoice.status !== INVOICE_STATUS.CANCELLED ? `
+                      <button class="btn-sm" onclick="window.invoiceApp.editInvoice('${invoice.id}')">Sửa</button>
+                      <button class="btn-sm success" onclick="window.invoiceApp.openPaymentModal('${invoice.id}')">Thanh toán</button>
+                    ` : ''}
+                    ${[INVOICE_STATUS.DRAFT, INVOICE_STATUS.ISSUED].includes(invoice.status) ? `
+                      <button class="btn-sm danger" onclick="window.invoiceApp.deleteInvoice('${invoice.id}')">Xóa</button>
+                    ` : ''}
+                  </div>
+                </td>
+              </tr>
+            `;
+              })
+              .join('')}
+          </tbody>
+        </table>
+      `;
+    }
+
+    function getStatusLabel(status) {
+      const labels = {
+        [INVOICE_STATUS.DRAFT]: 'Nháp',
+        [INVOICE_STATUS.ISSUED]: 'Đã phát hành',
+        [INVOICE_STATUS.OVERDUE]: 'Quá hạn',
+        [INVOICE_STATUS.PAID]: 'Đã thanh toán',
+        [INVOICE_STATUS.CANCELLED]: 'Hủy bỏ',
+      };
+      return labels[status] || status;
+    }
+
+    function filterInvoices() {
+      const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+      const statusFilter = document.getElementById('statusFilter').value;
+
+      filteredInvoices = allInvoices.filter((invoice) => {
+        const matchesSearch =
+          invoice.invoice_number.toLowerCase().includes(searchTerm) ||
+          invoice.resident_name.toLowerCase().includes(searchTerm);
+        const matchesStatus = !statusFilter || invoice.status === statusFilter;
+
+        return matchesSearch && matchesStatus;
+      });
+
+      renderInvoices(filteredInvoices);
+    }
+
+    function updateKPIs() {
+      let totalRevenue = 0;
+      let overdueAmount = 0;
+      let paidAmount = 0;
+      let overdueCount = 0;
+
+      const overdue = new Date();
+      overdue.setDate(overdue.getDate() - 1);
+
+      allInvoices.forEach((invoice) => {
+        totalRevenue += invoice.total_amount;
+
+        if (invoice.status === INVOICE_STATUS.PAID) {
+          paidAmount += invoice.total_amount;
+        }
+
+        if (
+          invoice.status !== INVOICE_STATUS.PAID &&
+          invoice.status !== INVOICE_STATUS.CANCELLED &&
+          new Date(invoice.due_date) < overdue
+        ) {
+          overdueAmount += invoice.total_amount;
+          overdueCount++;
+        }
+      });
+
+      document.getElementById('totalRevenue').textContent = formatCurrency(totalRevenue);
+      document.getElementById('overdueAmount').textContent = formatCurrency(overdueAmount);
+      document.getElementById('paidAmount').textContent = formatCurrency(paidAmount);
+      document.getElementById('totalInvoices').textContent = allInvoices.length;
+    }
+
+    function openAddInvoiceModal() {
+      editingInvoiceId = null;
+      document.getElementById('invoiceModalTitle').textContent = 'Tạo hóa đơn';
+      resetInvoiceForm();
+      document.getElementById('invoiceModal').classList.add('show');
+    }
+
+    function closeInvoiceModal() {
+      document.getElementById('invoiceModal').classList.remove('show');
+      resetInvoiceForm();
+    }
+
+    function resetInvoiceForm() {
+      document.getElementById('invoiceForm').reset();
+      lineItemsData = [];
+      document.getElementById('invoiceDate').valueAsDate = new Date();
+
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 7);
+      document.getElementById('dueDate').valueAsDate = tomorrow;
+
+      // Add first line item
+      addLineItem();
+      document.getElementById('invoiceFormError').classList.remove('show');
+    }
+
+    function addLineItem() {
+      const container = document.getElementById('lineItemsContainer');
+      const itemId = Date.now();
+
+      const lineItem = document.createElement('div');
+      lineItem.className = 'line-item';
+      lineItem.id = `line-item-${itemId}`;
+      lineItem.innerHTML = `
+        <input type="text" placeholder="Mô tả hạng mục" class="item-description" value="${
+          lineItemsData.length === 0 ? 'Tiền thuê căn hộ' : ''
+        }" />
+        <input type="number" placeholder="Số lượng" class="item-quantity" value="1" min="1" />
+        <input type="number" placeholder="Đơn giá" class="item-price" value="0" min="0" step="1000" />
+        <button type="button" class="line-item-remove" onclick="window.invoiceApp.removeLineItem('${itemId}')">Xóa</button>
+      `;
+
+      container.appendChild(lineItem);
+
+      // Add event listeners
+      lineItem.querySelectorAll('input').forEach((input) => {
+        input.addEventListener('change', updateLineItemTotals);
+      });
+
+      lineItemsData.push({ id: itemId });
+      updateLineItemTotals();
+    }
+
+    function removeLineItem(itemId) {
+      const lineItem = document.getElementById(`line-item-${itemId}`);
+      if (lineItem) {
+        lineItem.remove();
+        lineItemsData = lineItemsData.filter((item) => item.id !== itemId);
+        updateLineItemTotals();
+      }
+    }
+
+    function updateLineItemTotals() {
+      let total = 0;
+
+      document.querySelectorAll('.line-item').forEach((lineItem) => {
+        const quantity = parseFloat(lineItem.querySelector('.item-quantity').value) || 0;
+        const price = parseFloat(lineItem.querySelector('.item-price').value) || 0;
+        const itemTotal = quantity * price;
+        total += itemTotal;
+      });
+
+      document.getElementById('invoiceTotalDisplay').textContent = formatCurrency(total);
+    }
+
+    async function handleCreateInvoice(e) {
+      e.preventDefault();
+
+      const residentId = document.getElementById('resident').value;
+      const apartmentId = document.getElementById('apartment').value;
+      const invoiceDate = document.getElementById('invoiceDate').value;
+      const dueDate = document.getElementById('dueDate').value;
+      const description = document.getElementById('invoiceDescription').value;
+
+      // Validation
+      if (!residentId || !apartmentId || !invoiceDate || !dueDate) {
+        showFormError('invoiceFormError', 'Vui lòng điền đầy đủ thông tin bắt buộc');
+        return;
+      }
+
+      if (new Date(dueDate) <= new Date(invoiceDate)) {
+        showFormError('invoiceFormError', 'Hạn thanh toán phải sau ngày tạo hóa đơn');
+        return;
+      }
+
+      // Collect line items
+      const lineItems = [];
+      let totalAmount = 0;
+
+      document.querySelectorAll('.line-item').forEach((lineItem) => {
+        const description = lineItem.querySelector('.item-description').value;
+        const quantity = parseFloat(lineItem.querySelector('.item-quantity').value) || 0;
+        const price = parseFloat(lineItem.querySelector('.item-price').value) || 0;
+
+        if (description && quantity > 0 && price > 0) {
+          const itemTotal = quantity * price;
+          lineItems.push({
+            description,
+            quantity,
+            price,
+            total: itemTotal,
+          });
+          totalAmount += itemTotal;
+        }
+      });
+
+      if (lineItems.length === 0 || totalAmount === 0) {
+        showFormError('invoiceFormError', 'Vui lòng thêm ít nhất một hạng mục với giá > 0');
+        return;
+      }
+
+      try {
+        const resident = allResidents.find((r) => r.id === residentId);
+        const apartment = allApartments.find((a) => a.id === apartmentId);
+
+        const invoiceData = {
+          resident_id: residentId,
+          apartment_id: apartmentId,
+          invoice_date: invoiceDate,
+          due_date: dueDate,
+          total_amount: totalAmount,
+          line_items: lineItems,
+          description: description,
+          status: INVOICE_STATUS.ISSUED,
+          resident_name: resident?.name,
+          apartment_number: apartment?.apartment_number,
+        };
+
+        const response = await invoiceAPI.createInvoice(invoiceData);
+
+        if (response.success || response.data) {
+          showToast('Hóa đơn đã được tạo thành công', 'success');
+          closeInvoiceModal();
+          await loadInvoices();
+          updateKPIs();
+        }
+      } catch (error) {
+        console.error('Error creating invoice:', error);
+        showFormError('invoiceFormError', error.message || 'Lỗi tạo hóa đơn');
+      }
+    }
+
+    function openPaymentModal(invoiceId) {
+      const invoice = allInvoices.find((i) => i.id === invoiceId);
+      if (!invoice) return;
+
+      document.getElementById('paymentInvoiceNumber').value = invoice.invoice_number;
+      document.getElementById('paymentAmount').value = formatCurrency(invoice.total_amount);
+      document.getElementById('paymentPaid').value = invoice.total_amount;
+      document.getElementById('paymentDate').valueAsDate = new Date();
+      document.getElementById('paymentMethod').value = '';
+      document.getElementById('paymentReference').value = '';
+      document.getElementById('paymentNotes').value = '';
+
+      document.getElementById('paymentModal').dataset.invoiceId = invoiceId;
+      document.getElementById('paymentModal').classList.add('show');
+      document.getElementById('paymentFormError').classList.remove('show');
+    }
+
+    function closePaymentModal() {
+      document.getElementById('paymentModal').classList.remove('show');
+      delete document.getElementById('paymentModal').dataset.invoiceId;
+    }
+
+    function updatePaymentStatus() {
+      const paid = parseFloat(document.getElementById('paymentPaid').value) || 0;
+      const invoice = allInvoices.find((i) => i.id === document.getElementById('paymentModal').dataset.invoiceId);
+      if (!invoice) return;
+
+      const status = paid >= invoice.total_amount ? '✓ Đủ' : `Còn thiếu ${formatCurrency(invoice.total_amount - paid)}`;
+      // Could update UI here if needed
+    }
+
+    async function handleRecordPayment(e) {
+      e.preventDefault();
+
+      const invoiceId = document.getElementById('paymentModal').dataset.invoiceId;
+      const paymentMethod = document.getElementById('paymentMethod').value;
+      const paymentDate = document.getElementById('paymentDate').value;
+      const amountPaid = parseFloat(document.getElementById('paymentPaid').value) || 0;
+      const referenceNumber = document.getElementById('paymentReference').value;
+      const notes = document.getElementById('paymentNotes').value;
+
+      if (!paymentMethod || !paymentDate || amountPaid <= 0) {
+        showFormError('paymentFormError', 'Vui lòng điền đầy đủ thông tin thanh toán');
+        return;
+      }
+
+      try {
+        const paymentData = {
+          payment_method: paymentMethod,
+          payment_date: paymentDate,
+          amount_paid: amountPaid,
+          reference_number: referenceNumber,
+          notes: notes,
+        };
+
+        const response = await invoiceAPI.recordPayment(invoiceId, paymentData);
+
+        if (response.success || response.data) {
+          showToast('Thanh toán đã được ghi nhận', 'success');
+          closePaymentModal();
+          await loadInvoices();
+          updateKPIs();
+        }
+      } catch (error) {
+        console.error('Error recording payment:', error);
+        showFormError('paymentFormError', error.message || 'Lỗi ghi nhận thanh toán');
+      }
+    }
+
+    function showFormError(elementId, message) {
+      const element = document.getElementById(elementId);
+      element.textContent = message;
+      element.classList.add('show');
+    }
+
+    // Public methods for onclick handlers
+    window.invoiceApp = {
+      viewInvoice: (invoiceId) => {
+        const invoice = allInvoices.find((i) => i.id === invoiceId);
+        if (!invoice) return;
+        alert(`Hóa đơn ${invoice.invoice_number}\n\nCư dân: ${invoice.resident_name}\nCăn hộ: ${invoice.apartment_number}\nSố tiền: ${formatCurrency(invoice.total_amount)}\nTrạng thái: ${getStatusLabel(invoice.status)}`);
+      },
+      editInvoice: (invoiceId) => {
+        showToast('Chức năng sửa đang được phát triển', 'info');
+      },
+      openPaymentModal: openPaymentModal,
+      deleteInvoice: async (invoiceId) => {
+        if (!confirm('Bạn có chắc chắn muốn xóa hóa đơn này?')) return;
+        showToast('Chức năng xóa đang được phát triển', 'info');
+      },
+      removeLineItem: removeLineItem,
+    };
+
+    // Initialize the page
+    init();
+  </script>
+</body>
+</html>
