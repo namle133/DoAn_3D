@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard - Vinhomes Property Management</title>
+  <link rel="stylesheet" href="../css/admin.css" />
+</head>
+<body>
+  <div id="navbar-placeholder"></div>
+
+  <div class="container">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Dashboard KPI</h1>
+        <p class="page-subtitle">UC 2.7.46 — Tổng quan vận hành theo thời gian thực</p>
+      </div>
+      <a href="/index.html" target="_blank" class="btn btn-outline">🗺 Mở GIS 3D</a>
+    </div>
+
+    <!-- KPI Cards (UC 2.7.46) -->
+    <div class="kpi-grid" id="kpiGrid">
+      <div class="loading"><div class="spinner"></div><p>Đang tải dữ liệu...</p></div>
+    </div>
+
+    <!-- Hợp đồng sắp hết hạn -->
+    <div class="section">
+      <div class="section-title">
+        <span>⚠️ Hợp đồng sắp hết hạn (30 ngày)</span>
+        <a href="/pages/contracts.html">Xem tất cả</a>
+      </div>
+      <div id="expiringContracts">
+        <div class="empty-state"><div class="empty-state-icon">📄</div><p>Đang tải...</p></div>
+      </div>
+    </div>
+
+    <!-- Hóa đơn quá hạn -->
+    <div class="section">
+      <div class="section-title">
+        <span>💰 Hóa đơn quá hạn</span>
+        <a href="/pages/invoices.html">Xem tất cả</a>
+      </div>
+      <div id="overdueInvoices">
+        <div class="empty-state"><div class="empty-state-icon">💰</div><p>Đang tải...</p></div>
+      </div>
+    </div>
+
+    <!-- Yêu cầu bảo trì -->
+    <div class="section">
+      <div class="section-title">
+        <span>🔧 Yêu cầu bảo trì chờ xử lý</span>
+        <a href="/pages/maintenance.html">Xem tất cả</a>
+      </div>
+      <div id="maintenanceRequests">
+        <div class="empty-state"><div class="empty-state-icon">🔧</div><p>Đang tải...</p></div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initLayout } from '../js/modules/layout.js';
+    import reportsAPI from '../js/api/reports.js';
+    import invoiceAPI from '../js/api/invoices.js';
+    import maintenanceAPI from '../js/api/maintenance.js';
+    import contractsAPI from '../js/api/contracts.js';
+    import { formatCurrency, formatDate, showToast } from '../js/utils/helpers.js';
+
+    await initLayout({ requiredRoles: ['admin', 'manager', 'staff'] });
+
+    async function loadKPIs() {
+      try {
+        const res = await reportsAPI.getDashboardKPIs();
+        // Backend returns data directly, not wrapped in res.data
+        const k = Array.isArray(res) ? res[0] : (res.data || res || {});
+        const total = k.total_apartments || 0;
+        const rented = k.rented_apartments || 0;
+        const empty = k.empty_apartments || (total - rented);
+        const maintenance = k.maintenance_apartments || 0;
+        const occupancy = total ? ((rented / total) * 100).toFixed(1) : 0;
+
+        document.getElementById('kpiGrid').innerHTML = `
+          <div class="kpi-card blue">
+            <div class="kpi-label">Tổng căn hộ</div>
+            <div class="kpi-value">${total}</div>
+            <div class="kpi-sub">Toàn khu Vinhomes West Point</div>
+          </div>
+          <div class="kpi-card green">
+            <div class="kpi-label">Đang thuê</div>
+            <div class="kpi-value">${rented}</div>
+            <div class="kpi-sub">${occupancy}% tỷ lệ lấp đầy</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Đang trống</div>
+            <div class="kpi-value">${empty}</div>
+            <div class="kpi-sub">Sẵn sàng cho thuê</div>
+          </div>
+          <div class="kpi-card orange">
+            <div class="kpi-label">Đang bảo trì</div>
+            <div class="kpi-value">${maintenance}</div>
+            <div class="kpi-sub">Cần theo dõi</div>
+          </div>
+          <div class="kpi-card green">
+            <div class="kpi-label">Doanh thu tháng</div>
+            <div class="kpi-value" style="font-size:20px">${formatCurrency(k.monthly_revenue || 0)}</div>
+            <div class="kpi-sub">Tính đến hôm nay</div>
+          </div>
+          <div class="kpi-card red">
+            <div class="kpi-label">Hóa đơn quá hạn</div>
+            <div class="kpi-value">${k.overdue_invoices || 0}</div>
+            <div class="kpi-sub">${formatCurrency(k.overdue_amount || 0)}</div>
+          </div>
+          <div class="kpi-card orange">
+            <div class="kpi-label">HĐ sắp hết hạn</div>
+            <div class="kpi-value">${k.expiring_contracts_count || 0}</div>
+            <div class="kpi-sub">Trong 30 ngày tới</div>
+          </div>
+          <div class="kpi-card red">
+            <div class="kpi-label">Bảo trì chờ xử lý</div>
+            <div class="kpi-value">${k.pending_maintenance_requests || 0}</div>
+            <div class="kpi-sub">Cần phân công</div>
+          </div>
+        `;
+      } catch (err) {
+        document.getElementById('kpiGrid').innerHTML =
+          `<div class="alert alert-error">Không tải được KPI: ${err.message}. Kiểm tra backend đang chạy.</div>`;
+      }
+    }
+
+    async function loadOverdueInvoices() {
+      try {
+        const res = await invoiceAPI.getOverdueInvoices();
+        // Handle both wrapped and unwrapped responses
+        const invoices = (Array.isArray(res) ? res : (res.data || res.invoices || [])).slice(0, 8);
+        const el = document.getElementById('overdueInvoices');
+        if (!invoices.length) {
+          el.innerHTML = `<div class="empty-state"><div class="empty-state-icon">✓</div><p>Không có hóa đơn quá hạn</p></div>`;
+          return;
+        }
+        el.innerHTML = `<div class="table-responsive"><table>
+          <thead><tr><th>Mã HĐ</th><th>Căn hộ</th><th>Số tiền</th><th>Hạn TT</th><th>Quá hạn</th></tr></thead>
+          <tbody>${invoices.map(i => `<tr>
+            <td>${i.invoice_code || i.id}</td>
+            <td>${i.apartment_code || '-'}</td>
+            <td>${formatCurrency(i.total_amount)}</td>
+            <td>${formatDate(i.due_date)}</td>
+            <td><span class="badge badge-red">${Math.max(0, Math.floor((Date.now() - new Date(i.due_date)) / 86400000))} ngày</span></td>
+          </tr>`).join('')}</tbody></table></div>`;
+      } catch (_) {}
+    }
+
+    async function loadMaintenance() {
+      try {
+        const res = await maintenanceAPI.getMaintenanceRequests();
+        // Handle both wrapped and unwrapped responses
+        const reqs = (Array.isArray(res) ? res : (res.data || res.requests || [])).filter(r => !['completed', 'cancelled'].includes(r.status)).slice(0, 8);
+        const el = document.getElementById('maintenanceRequests');
+        if (!reqs.length) {
+          el.innerHTML = `<div class="empty-state"><div class="empty-state-icon">✓</div><p>Không có yêu cầu chờ xử lý</p></div>`;
+          return;
+        }
+        const PRIORITY = { urgent: 'badge-red', high: 'badge-orange', medium: 'badge-blue', low: 'badge-gray' };
+        el.innerHTML = `<div class="table-responsive"><table>
+          <thead><tr><th>Mã</th><th>Loại</th><th>Ưu tiên</th><th>Trạng thái</th><th>Ngày tạo</th></tr></thead>
+          <tbody>${reqs.map(r => `<tr>
+            <td>${r.request_code || r.id}</td>
+            <td>${r.issue_type || '-'}</td>
+            <td><span class="badge ${PRIORITY[r.priority] || 'badge-gray'}">${r.priority}</span></td>
+            <td><span class="badge badge-blue">${r.status}</span></td>
+            <td>${formatDate(r.created_at)}</td>
+          </tr>`).join('')}</tbody></table></div>`;
+      } catch (_) {}
+    }
+
+    async function loadExpiringContracts() {
+      try {
+        const res = await contractsAPI.getContracts();
+        // Handle both wrapped and unwrapped responses
+        const contracts = Array.isArray(res) ? res : (res.data || res.contracts || []);
+        const now = Date.now();
+        const in30days = now + 30 * 86400000;
+        const expiring = contracts.filter(c => {
+          const end = new Date(c.end_date).getTime();
+          return c.status === 'active' && end > now && end <= in30days;
+        }).slice(0, 8);
+        const el = document.getElementById('expiringContracts');
+        if (!expiring.length) {
+          el.innerHTML = `<div class="empty-state"><div class="empty-state-icon">✓</div><p>Không có hợp đồng sắp hết hạn</p></div>`;
+          return;
+        }
+        el.innerHTML = `<div class="table-responsive"><table>
+          <thead><tr><th>Mã HĐ</th><th>Cư dân</th><th>Căn hộ</th><th>Ngày hết hạn</th><th>Còn lại</th></tr></thead>
+          <tbody>${expiring.map(c => {
+            const days = Math.ceil((new Date(c.end_date) - now) / 86400000);
+            return `<tr>
+              <td>${c.contract_code || c.id}</td>
+              <td>${c.resident_name || '-'}</td>
+              <td>${c.apartment_code || '-'}</td>
+              <td>${formatDate(c.end_date)}</td>
+              <td><span class="badge badge-orange">${days} ngày</span></td>
+            </tr>`;
+          }).join('')}</tbody></table></div>`;
+      } catch (_) {}
+    }
+
+    loadKPIs();
+    loadOverdueInvoices();
+    loadMaintenance();
+    loadExpiringContracts();
+    setInterval(() => { loadKPIs(); loadOverdueInvoices(); loadMaintenance(); }, 30000);
+  </script>
+</body>
+</html>
