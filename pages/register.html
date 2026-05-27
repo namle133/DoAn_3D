@@ -52,6 +52,33 @@
       50% { transform: translateY(20px); }
     }
 
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(40px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
     .register-wrapper {
       max-width: 600px;
       margin: 0 auto;
@@ -69,17 +96,6 @@
       animation: slideUp 0.5s ease-out;
     }
 
-    @keyframes slideUp {
-      from {
-        opacity: 0;
-        transform: translateY(40px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
     .register-header {
       text-align: center;
       margin-bottom: 35px;
@@ -90,11 +106,6 @@
       color: #667eea;
       margin-bottom: 12px;
       animation: bounce 2s ease-in-out infinite;
-    }
-
-    @keyframes bounce {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-10px); }
     }
 
     .register-box h1 {
@@ -216,29 +227,21 @@
       padding: 12px 16px;
       border-radius: 10px;
       margin-bottom: 24px;
-      display: none;
       animation: slideDown 0.3s ease-out;
       font-size: 14px;
-      display: flex;
+      display: none;
       align-items: center;
       gap: 10px;
-    }
-
-    @keyframes slideDown {
-      from {
-        opacity: 0;
-        transform: translateY(-10px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
     }
 
     .alert-error {
       background: #fee;
       color: #c33;
       border-left: 4px solid #c33;
+    }
+
+    .alert-error.show {
+      display: flex;
     }
 
     .alert-error i {
@@ -249,6 +252,10 @@
       background: #efe;
       color: #3c3;
       border-left: 4px solid #3c3;
+    }
+
+    .alert-success.show {
+      display: flex;
     }
 
     .alert-success i {
@@ -294,20 +301,6 @@
       opacity: 0.6;
       cursor: not-allowed;
       transform: none;
-    }
-
-    .form-divider {
-      display: flex;
-      align-items: center;
-      margin: 28px 0;
-      color: #ddd;
-      gap: 12px;
-    }
-
-    .form-divider span {
-      flex: 1;
-      height: 1px;
-      background: #ddd;
     }
 
     .login-link {
@@ -498,6 +491,23 @@
     const successText = document.getElementById('successText');
     const submitBtn = document.getElementById('submitBtn');
 
+    function showError(message) {
+      errorText.textContent = message;
+      errorMsg.classList.add('show');
+      successMsg.classList.remove('show');
+    }
+
+    function showSuccess(message) {
+      successText.textContent = message;
+      successMsg.classList.add('show');
+      errorMsg.classList.remove('show');
+    }
+
+    function hideMessages() {
+      errorMsg.classList.remove('show');
+      successMsg.classList.remove('show');
+    }
+
     // Validation functions
     function validateIDCard(idCard) {
       const cleaned = idCard.replace(/\D/g, '');
@@ -548,8 +558,7 @@
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      errorMsg.style.display = 'none';
-      successMsg.style.display = 'none';
+      hideMessages();
 
       // Collect all fields
       const email = document.getElementById('email').value.trim();
@@ -566,70 +575,60 @@
 
       // Validation
       if (!validateEmail(email).valid) {
-        errorText.textContent = 'Email không hợp lệ';
-        errorMsg.style.display = 'flex';
+        showError('Email không hợp lệ');
         return;
       }
 
       if (!validatePassword(password).valid) {
-        errorText.textContent = validatePassword(password).error;
-        errorMsg.style.display = 'flex';
+        showError(validatePassword(password).error);
         return;
       }
 
       if (password !== confirm) {
-        errorText.textContent = 'Mật khẩu xác nhận không khớp';
-        errorMsg.style.display = 'flex';
+        showError('Mật khẩu xác nhận không khớp');
         return;
       }
 
       if (!username || username.length < 3) {
-        errorText.textContent = 'Tên đăng nhập phải có ít nhất 3 ký tự';
-        errorMsg.style.display = 'flex';
+        showError('Tên đăng nhập phải có ít nhất 3 ký tự');
         return;
       }
 
       const fullNameVal = validateFullName(fullName);
       if (!fullNameVal.valid) {
-        errorText.textContent = fullNameVal.error;
-        errorMsg.style.display = 'flex';
+        showError(fullNameVal.error);
         return;
       }
 
       const idCardVal = validateIDCard(idCard);
       if (!idCardVal.valid) {
-        errorText.textContent = idCardVal.error;
-        errorMsg.style.display = 'flex';
+        showError(idCardVal.error);
         return;
       }
 
       const dobVal = validateDateOfBirth(dateOfBirth);
       if (!dobVal.valid) {
-        errorText.textContent = dobVal.error;
-        errorMsg.style.display = 'flex';
+        showError(dobVal.error);
         return;
       }
 
       if (!gender) {
-        errorText.textContent = 'Vui lòng chọn giới tính';
-        errorMsg.style.display = 'flex';
+        showError('Vui lòng chọn giới tính');
         return;
       }
 
       const phoneVal = validatePhoneNumber(phoneNumber);
       if (!phoneVal.valid) {
-        errorText.textContent = phoneVal.error;
-        errorMsg.style.display = 'flex';
+        showError(phoneVal.error);
         return;
       }
 
       if (!permanentAddress || permanentAddress.length < 5) {
-        errorText.textContent = 'Địa chỉ thường trú phải có ít nhất 5 ký tự';
-        errorMsg.style.display = 'flex';
+        showError('Địa chỉ thường trú phải có ít nhất 5 ký tự');
         return;
       }
 
-      document.getElementById('submitBtn').disabled = true;
+      submitBtn.disabled = true;
       try {
         // Prepare data to send
         const registerData = {
@@ -648,13 +647,11 @@
         };
 
         await authManager.register(registerData);
-        successText.textContent = 'Đăng ký thành công! Đang chuyển hướng...';
-        successMsg.style.display = 'flex';
+        showSuccess('Đăng ký thành công! Đang chuyển hướng...');
         setTimeout(() => authManager.redirectToDashboard(), 1500);
       } catch (err) {
-        errorText.textContent = err.message || 'Đăng ký thất bại';
-        errorMsg.style.display = 'flex';
-        document.getElementById('submitBtn').disabled = false;
+        showError(err.message || 'Đăng ký thất bại');
+        submitBtn.disabled = false;
       }
     });
   </script>
