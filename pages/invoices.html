@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Quản lý Hóa đơn - Vinhomes Property Management</title>
+  <link rel="stylesheet" href="../css/admin.css" />
   <style>
     * {
       margin: 0;
@@ -625,26 +626,7 @@
   </style>
 </head>
 <body>
-  <!-- Navigation -->
-  <nav class="navbar">
-    <div class="navbar-left">
-      <div class="logo" onclick="window.location.href='/pages/dashboard.html'">🏢 Vinhomes</div>
-      <ul class="nav-menu">
-        <li><a href="/pages/dashboard.html">Dashboard</a></li>
-        <li><a href="/pages/residents.html">Cư dân</a></li>
-        <li><a href="/pages/contracts.html">Hợp đồng</a></li>
-        <li><a href="/pages/invoices.html" class="active">Hóa đơn</a></li>
-      </ul>
-    </div>
-    <div class="navbar-right">
-      <div class="user-info">
-        <div class="name" id="userName">Đang tải...</div>
-        <div class="role" id="userRole">-</div>
-      </div>
-      <div class="avatar" id="userAvatar">-</div>
-      <button class="logout-btn" id="logoutBtn">Đăng xuất</button>
-    </div>
-  </nav>
+  <div id="navbar-placeholder"></div>
 
   <!-- Main Content -->
   <div class="container">
@@ -842,14 +824,12 @@
 
   <script type="module">
     import authManager from '../js/modules/auth-manager.js';
+    import { initLayout } from '../js/modules/layout.js';
     import invoiceAPI from '../js/api/invoices.js';
     import residentAPI from '../js/api/residents.js';
     import buildingAPI from '../js/api/buildings.js';
     import { formatDate, formatCurrency, showToast, debounce } from '../js/utils/helpers.js';
     import { INVOICE_STATUS, ROLES } from '../js/utils/constants.js';
-
-    // Guard route
-    authManager.guardRoute();
 
     // State
     let currentUser = null;
@@ -864,27 +844,9 @@
     // Initialize
     async function init() {
       try {
+        await initLayout();
         currentUser = authManager.getCurrentUser();
         currentRole = authManager.getUserRole();
-
-        // Set user info
-        const roleLabels = {
-          admin: 'Quản trị viên',
-          manager: 'Ban quản lý',
-          staff: 'Nhân viên',
-          resident: 'Cư dân',
-        };
-
-        document.getElementById('userName').textContent = currentUser?.name || 'User';
-        document.getElementById('userRole').textContent = roleLabels[currentRole] || currentRole;
-        document.getElementById('userAvatar').textContent = (currentUser?.name || 'U')[0].toUpperCase();
-
-        // Logout
-        document.getElementById('logoutBtn').addEventListener('click', () => {
-          if (confirm('Bạn có chắc chắn muốn đăng xuất?')) {
-            authManager.logout();
-          }
-        });
 
         // Load data
         await Promise.all([loadInvoices(), loadResidents(), loadApartments()]);
@@ -942,7 +904,8 @@
     async function loadInvoices() {
       try {
         const response = await invoiceAPI.getInvoices();
-        allInvoices = response.data || [];
+        // Handle both array and object responses
+        allInvoices = Array.isArray(response) ? response : (response.data || response.invoices || []);
         renderInvoices(allInvoices);
       } catch (error) {
         console.error('Error loading invoices:', error);
@@ -953,7 +916,8 @@
     async function loadResidents() {
       try {
         const response = await residentAPI.getResidents();
-        allResidents = response.data || [];
+        // Handle both array and object responses
+        allResidents = Array.isArray(response) ? response : (response.data || response.residents || []);
         populateResidentDropdown();
       } catch (error) {
         console.error('Error loading residents:', error);
@@ -964,7 +928,8 @@
     async function loadApartments() {
       try {
         const response = await buildingAPI.getApartments();
-        allApartments = response.data || [];
+        // Handle both array and object responses
+        allApartments = Array.isArray(response) ? response : (response.data || response.apartments || []);
       } catch (error) {
         console.error('Error loading apartments:', error);
         showToast(`Lỗi tải căn hộ: ${error.message}`, 'error');
@@ -1266,8 +1231,8 @@
         const invoiceData = {
           resident_id: residentId,
           apartment_id: apartmentId,
-          invoice_date: invoiceDate,
-          due_date: dueDate,
+          invoice_date: new Date(invoiceDate + 'T00:00:00').toISOString(),
+          due_date: new Date(dueDate + 'T00:00:00').toISOString(),
           total_amount: totalAmount,
           line_items: lineItems,
           description: description,
@@ -1339,7 +1304,7 @@
       try {
         const paymentData = {
           payment_method: paymentMethod,
-          payment_date: paymentDate,
+          payment_date: new Date(paymentDate + 'T00:00:00').toISOString(),
           amount_paid: amountPaid,
           reference_number: referenceNumber,
           notes: notes,
