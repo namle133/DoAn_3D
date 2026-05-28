@@ -124,8 +124,22 @@ func ApproveContract(c *gin.Context) {
 
 	if req.Approved {
 		contract.Status = "active"
+		// Update apartment status to rented
+		if err := database.DB.Model(&models.Apartment{}).
+			Where("id = ?", contract.ApartmentID).
+			Update("current_status", "rented").Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update apartment status"})
+			return
+		}
 	} else {
 		contract.Status = "cancelled"
+		// Update apartment status back to empty
+		if err := database.DB.Model(&models.Apartment{}).
+			Where("id = ?", contract.ApartmentID).
+			Update("current_status", "empty").Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update apartment status"})
+			return
+		}
 	}
 
 	contract.ApprovedBy = stringPtr(userID.(string))
@@ -186,6 +200,14 @@ func TerminateContract(c *gin.Context) {
 
 	contract.Status = "terminated"
 	contract.TerminationReason = req.Reason
+
+	// Update apartment status back to empty
+	if err := database.DB.Model(&models.Apartment{}).
+		Where("id = ?", contract.ApartmentID).
+		Update("current_status", "empty").Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update apartment status"})
+		return
+	}
 
 	if err := database.DB.Save(&contract).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to terminate contract"})
