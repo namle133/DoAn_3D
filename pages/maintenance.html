@@ -1,0 +1,1539 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quản lý Yêu cầu Bảo trì - Vinhomes Property Management</title>
+  <link rel="stylesheet" href="../css/admin.css" />
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f5f5f5;
+      color: #333;
+    }
+
+    .navbar {
+      background: white;
+      border-bottom: 1px solid #ddd;
+      padding: 15px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    .navbar-left {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .logo {
+      font-size: 20px;
+      font-weight: bold;
+      color: #667eea;
+      cursor: pointer;
+    }
+
+    .nav-menu {
+      display: flex;
+      gap: 30px;
+      list-style: none;
+    }
+
+    .nav-menu a {
+      color: #666;
+      text-decoration: none;
+      font-size: 14px;
+      transition: color 0.3s;
+      cursor: pointer;
+    }
+
+    .nav-menu a:hover,
+    .nav-menu a.active {
+      color: #667eea;
+      font-weight: 600;
+    }
+
+    .navbar-right {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .user-info {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      font-size: 13px;
+    }
+
+    .user-info .name {
+      font-weight: 600;
+      color: #333;
+    }
+
+    .user-info .role {
+      color: #999;
+      font-size: 12px;
+    }
+
+    .avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 16px;
+    }
+
+    .logout-btn {
+      background: #f44336;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: background 0.3s;
+    }
+
+    .logout-btn:hover {
+      background: #d32f2f;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+
+    .page-title {
+      font-size: 28px;
+      font-weight: bold;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn-primary {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.3s;
+    }
+
+    .btn-primary:hover {
+      background: #764ba2;
+    }
+
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-bottom: 25px;
+    }
+
+    .kpi-card {
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    .kpi-label {
+      color: #999;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+
+    .kpi-value {
+      font-size: 24px;
+      font-weight: bold;
+      color: #333;
+    }
+
+    .filters-bar {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    .search-input {
+      flex: 1;
+      min-width: 200px;
+      padding: 10px 15px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      font-size: 14px;
+    }
+
+    .filter-select {
+      padding: 10px 15px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      font-size: 14px;
+      background: white;
+      cursor: pointer;
+    }
+
+    .section {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    .section-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 15px;
+    }
+
+    .table-responsive {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th {
+      background: #f9f9f9;
+      padding: 12px;
+      text-align: left;
+      font-size: 13px;
+      font-weight: 600;
+      color: #666;
+      border-bottom: 2px solid #eee;
+    }
+
+    td {
+      padding: 12px;
+      border-bottom: 1px solid #eee;
+      font-size: 14px;
+    }
+
+    tr:hover {
+      background: #fafafa;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .status-new {
+      background: #e3f2fd;
+      color: #1976d2;
+    }
+
+    .status-assigned {
+      background: #f3e5f5;
+      color: #7b1fa2;
+    }
+
+    .status-in_progress {
+      background: #fff3e0;
+      color: #e65100;
+    }
+
+    .status-completed {
+      background: #e8f5e9;
+      color: #2e7d32;
+    }
+
+    .status-cancelled {
+      background: #f5f5f5;
+      color: #666;
+      text-decoration: line-through;
+    }
+
+    .priority-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .priority-low {
+      background: #c8e6c9;
+      color: #2e7d32;
+    }
+
+    .priority-medium {
+      background: #fff9c4;
+      color: #f57f17;
+    }
+
+    .priority-high {
+      background: #ffccbc;
+      color: #d84315;
+    }
+
+    .priority-urgent {
+      background: #ffcdd2;
+      color: #c62828;
+    }
+
+    .action-btns {
+      display: flex;
+      gap: 5px;
+      flex-wrap: wrap;
+    }
+
+    .btn-sm {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: background 0.3s;
+    }
+
+    .btn-sm:hover {
+      background: #764ba2;
+    }
+
+    .btn-sm.danger {
+      background: #f44336;
+    }
+
+    .btn-sm.danger:hover {
+      background: #d32f2f;
+    }
+
+    .btn-sm.success {
+      background: #4CAF50;
+    }
+
+    .btn-sm.success:hover {
+      background: #45a049;
+    }
+
+    .btn-sm:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: #999;
+    }
+
+    .empty-state-icon {
+      font-size: 48px;
+      margin-bottom: 15px;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 40px 20px;
+      color: #999;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 2px solid #f3f3f3;
+      border-top: 2px solid #667eea;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-right: 10px;
+    }
+
+    @keyframes spin {
+      0% {
+        transform: rotate(0deg);
+      }
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      overflow-y: auto;
+      padding: 20px;
+    }
+
+    .modal.show {
+      display: flex;
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: 8px;
+      padding: 30px;
+      width: 90%;
+      max-width: 650px;
+      max-height: 90vh;
+      overflow-y: auto;
+      margin: auto;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .modal-header h2 {
+      font-size: 20px;
+      font-weight: 600;
+    }
+
+    .close-btn {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: #999;
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 500;
+      font-size: 14px;
+    }
+
+    .form-group.required label::after {
+      content: ' *';
+      color: #f44336;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      font-size: 14px;
+      font-family: inherit;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .form-group textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+    }
+
+    .radio-group {
+      display: flex;
+      gap: 15px;
+      margin-top: 8px;
+    }
+
+    .radio-option {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .radio-option input[type="radio"] {
+      width: auto;
+      cursor: pointer;
+    }
+
+    .file-input-wrapper {
+      position: relative;
+      display: inline-block;
+      width: 100%;
+    }
+
+    .file-input-label {
+      display: inline-block;
+      padding: 10px 15px;
+      background: #f5f5f5;
+      border: 1px dashed #ddd;
+      border-radius: 5px;
+      cursor: pointer;
+      text-align: center;
+      width: 100%;
+      transition: background 0.3s;
+    }
+
+    .file-input-label:hover {
+      background: #efefef;
+    }
+
+    .file-input-wrapper input[type="file"] {
+      display: none;
+    }
+
+    .file-preview {
+      margin-top: 10px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+      gap: 10px;
+    }
+
+    .file-preview-item {
+      position: relative;
+      text-align: center;
+    }
+
+    .file-preview-item img {
+      max-width: 100%;
+      height: 80px;
+      object-fit: cover;
+      border-radius: 4px;
+    }
+
+    .file-remove-btn {
+      position: absolute;
+      top: -5px;
+      right: -5px;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #f44336;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .form-buttons {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 20px;
+    }
+
+    .btn-cancel {
+      background: #999;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    .btn-cancel:hover {
+      background: #777;
+    }
+
+    .error-alert {
+      background: #ffebee;
+      border: 1px solid #ef5350;
+      color: #c62828;
+      padding: 12px;
+      border-radius: 4px;
+      margin-bottom: 15px;
+      display: none;
+    }
+
+    .error-alert.show {
+      display: block;
+    }
+
+    .success-alert {
+      background: #e8f5e9;
+      border: 1px solid #66bb6a;
+      color: #2e7d32;
+      padding: 12px;
+      border-radius: 4px;
+      margin-bottom: 15px;
+      display: none;
+    }
+
+    .success-alert.show {
+      display: block;
+    }
+
+    @media (max-width: 768px) {
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+
+      .table-responsive {
+        font-size: 12px;
+      }
+
+      td, th {
+        padding: 8px;
+      }
+
+      .action-btns {
+        flex-direction: column;
+      }
+
+      .modal-content {
+        max-width: 95%;
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="navbar-placeholder"></div>
+
+  <!-- Main Container -->
+  <div class="container">
+    <!-- Page Header -->
+    <div class="page-header">
+      <h1 class="page-title">Quản lý Yêu cầu Bảo trì</h1>
+      <div class="header-actions">
+        <button class="btn-primary" id="createRequestBtn">+ Tạo yêu cầu</button>
+      </div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">Yêu cầu mới</div>
+        <div class="kpi-value" id="newRequestsCount">0</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Đang xử lý</div>
+        <div class="kpi-value" id="inProgressCount">0</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Hoàn thành</div>
+        <div class="kpi-value" id="completedCount">0</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Khẩn cấp</div>
+        <div class="kpi-value" id="urgentCount">0</div>
+      </div>
+    </div>
+
+    <!-- Filters Bar -->
+    <div class="filters-bar">
+      <input 
+        type="text" 
+        id="searchInput" 
+        class="search-input" 
+        placeholder="Tìm kiếm theo căn hộ hoặc loại vấn đề..."
+      />
+      <select id="statusFilter" class="filter-select">
+        <option value="">Tất cả trạng thái</option>
+        <option value="new">Mới</option>
+        <option value="assigned">Đã phân công</option>
+        <option value="in_progress">Đang xử lý</option>
+        <option value="completed">Hoàn thành</option>
+        <option value="cancelled">Hủy bỏ</option>
+      </select>
+      <select id="priorityFilter" class="filter-select">
+        <option value="">Tất cả mức độ ưu tiên</option>
+        <option value="low">Thấp</option>
+        <option value="medium">Trung bình</option>
+        <option value="high">Cao</option>
+        <option value="urgent">Khẩn cấp</option>
+      </select>
+    </div>
+
+    <!-- Maintenance Requests Table -->
+    <div class="section">
+      <div class="section-title">Danh sách Yêu cầu Bảo trì</div>
+      <div class="table-responsive">
+        <div id="maintenanceContainer">
+          <div class="loading">
+            <div class="spinner"></div> Đang tải dữ liệu...
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create Maintenance Modal -->
+  <div id="createModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="createModalTitle">Tạo yêu cầu bảo trì</h2>
+        <button class="close-btn" id="closeCreateBtn">&times;</button>
+      </div>
+      <div id="createFormError" class="error-alert"></div>
+      <form id="createForm">
+        <div class="form-row">
+          <div class="form-group required">
+            <label for="createApartment">Căn hộ</label>
+            <input 
+              type="text" 
+              id="createApartment" 
+              placeholder="Tìm kiếm căn hộ..."
+              autocomplete="off"
+            />
+            <div id="apartmentDropdown" style="position: absolute; background: white; border: 1px solid #ddd; border-top: none; max-height: 200px; overflow-y: auto; width: 48%; z-index: 10; display: none;"></div>
+          </div>
+          <div class="form-group required">
+            <label for="createIssueType">Loại vấn đề</label>
+            <select id="createIssueType">
+              <option value="">-- Chọn loại vấn đề --</option>
+              <option value="plumbing">Cấp nước / Thoát nước</option>
+              <option value="electrical">Điện / Điện tử</option>
+              <option value="structural">Kết cấu / Vách tường</option>
+              <option value="appliances">Thiết bị / Nội thất</option>
+              <option value="cleaning">Vệ sinh / Dọn dẹp</option>
+              <option value="other">Khác</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group required">
+            <label>Mức độ ưu tiên</label>
+            <div class="radio-group">
+              <label class="radio-option">
+                <input type="radio" name="priorityLevel" value="low" checked />
+                Thấp
+              </label>
+              <label class="radio-option">
+                <input type="radio" name="priorityLevel" value="medium" />
+                Trung bình
+              </label>
+              <label class="radio-option">
+                <input type="radio" name="priorityLevel" value="high" />
+                Cao
+              </label>
+              <label class="radio-option">
+                <input type="radio" name="priorityLevel" value="urgent" />
+                Khẩn cấp
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group required">
+          <label for="createDescription">Mô tả chi tiết</label>
+          <textarea 
+            id="createDescription" 
+            placeholder="Mô tả vấn đề, triệu chứng, vị trí cụ thể..."
+          ></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="createAssignTo">Phân công cho nhân viên</label>
+          <select id="createAssignTo">
+            <option value="">-- Không phân công --</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Tải ảnh (không bắt buộc)</label>
+          <div class="file-input-wrapper">
+            <label class="file-input-label">
+              📷 Nhấp để chọn ảnh hoặc kéo thả ảnh vào đây
+              <input type="file" id="createPhotos" multiple accept="image/*" />
+            </label>
+          </div>
+          <div id="createPhotoPreview" class="file-preview"></div>
+        </div>
+
+        <div class="form-buttons">
+          <button type="button" class="btn-cancel" id="cancelCreateBtn">Hủy</button>
+          <button type="submit" class="btn-primary">Tạo yêu cầu</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Assign Modal -->
+  <div id="assignModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Phân công yêu cầu</h2>
+        <button class="close-btn" id="closeAssignBtn">&times;</button>
+      </div>
+      <div id="assignFormError" class="error-alert"></div>
+      <form id="assignForm">
+        <div class="form-group required">
+          <label for="assignStaff">Chọn nhân viên</label>
+          <select id="assignStaff">
+            <option value="">-- Chọn nhân viên --</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="assignNotes">Ghi chú phân công</label>
+          <textarea id="assignNotes" placeholder="Thêm ghi chú cho nhân viên..."></textarea>
+        </div>
+        <div class="form-buttons">
+          <button type="button" class="btn-cancel" id="cancelAssignBtn">Hủy</button>
+          <button type="submit" class="btn-primary">Phân công</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Complete Request Modal -->
+  <div id="completeModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Hoàn thành yêu cầu</h2>
+        <button class="close-btn" id="closeCompleteBtn">&times;</button>
+      </div>
+      <div id="completeFormError" class="error-alert"></div>
+      <form id="completeForm">
+        <div class="form-group required">
+          <label for="completeResolution">Mô tả giải pháp</label>
+          <textarea 
+            id="completeResolution" 
+            placeholder="Mô tả những gì đã được làm để giải quyết vấn đề..."
+          ></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="completeNotes">Ghi chú hoàn thành</label>
+          <textarea 
+            id="completeNotes" 
+            placeholder="Ghi chú bổ sung..."
+          ></textarea>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="completeCost">Chi phí (VND)</label>
+            <input type="number" id="completeCost" placeholder="0" min="0" step="1000" />
+          </div>
+          <div class="form-group">
+            <label for="completeTechnician">Người thực hiện</label>
+            <input type="text" id="completeTechnician" placeholder="Tên nhân viên..." />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Ảnh hoàn thành công việc</label>
+          <div class="file-input-wrapper">
+            <label class="file-input-label">
+              📷 Nhấp để chọn ảnh
+              <input type="file" id="completePhotos" multiple accept="image/*" />
+            </label>
+          </div>
+          <div id="completePhotoPreview" class="file-preview"></div>
+        </div>
+
+        <div class="form-buttons">
+          <button type="button" class="btn-cancel" id="cancelCompleteBtn">Hủy</button>
+          <button type="submit" class="btn-primary">Hoàn thành</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- View Details Modal -->
+  <div id="viewModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Chi tiết yêu cầu</h2>
+        <button class="close-btn" id="closeViewBtn">&times;</button>
+      </div>
+      <div id="viewDetails"></div>
+      <div class="form-buttons">
+        <button type="button" class="btn-cancel" id="closeViewDetailsBtn">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import authManager from '../js/modules/auth-manager.js';
+    import { initLayout } from '../js/modules/layout.js';
+    import maintenanceAPI from '../js/api/maintenance.js';
+    import buildingAPI from '../js/api/buildings.js';
+    import residentAPI from '../js/api/residents.js';
+    import { formatDate, showToast, debounce } from '../js/utils/helpers.js';
+    import { MAINTENANCE_STATUS, MAINTENANCE_PRIORITY, ROLES } from '../js/utils/constants.js';
+
+    // State
+    let allRequests = [];
+    let filteredRequests = [];
+    let allApartments = [];
+    let allStaff = [];
+    let currentUser = null;
+    let currentRole = null;
+    let selectedRequestId = null;
+    let createPhotos = [];
+    let completePhotos = [];
+
+    // Initialize
+    async function init() {
+      try {
+        await initLayout();
+        currentUser = authManager.getCurrentUser();
+        currentRole = authManager.getUserRole();
+
+        // Load data
+        await Promise.all([
+          loadMaintenanceRequests(),
+          loadApartments(),
+          loadStaff(),
+        ]);
+
+        // Setup event listeners
+        setupEventListeners();
+
+        // Update KPIs
+        updateKPIs();
+      } catch (error) {
+        console.error('Error initializing:', error);
+        showToast(`Lỗi: ${error.message}`, 'error');
+      }
+    }
+
+    function setupEventListeners() {
+      // Create request
+      document.getElementById('createRequestBtn').addEventListener('click', openCreateModal);
+      document.getElementById('closeCreateBtn').addEventListener('click', closeCreateModal);
+      document.getElementById('cancelCreateBtn').addEventListener('click', closeCreateModal);
+      document.getElementById('createForm').addEventListener('submit', handleCreateRequest);
+
+      // Assign modal
+      document.getElementById('closeAssignBtn').addEventListener('click', closeAssignModal);
+      document.getElementById('cancelAssignBtn').addEventListener('click', closeAssignModal);
+      document.getElementById('assignForm').addEventListener('submit', handleAssignRequest);
+
+      // Complete modal
+      document.getElementById('closeCompleteBtn').addEventListener('click', closeCompleteModal);
+      document.getElementById('cancelCompleteBtn').addEventListener('click', closeCompleteModal);
+      document.getElementById('completeForm').addEventListener('submit', handleCompleteRequest);
+
+      // View modal
+      document.getElementById('closeViewBtn').addEventListener('click', closeViewModal);
+      document.getElementById('closeViewDetailsBtn').addEventListener('click', closeViewModal);
+
+      // Modal backgrounds
+      document.getElementById('createModal').addEventListener('click', (e) => {
+        if (e.target === document.getElementById('createModal')) closeCreateModal();
+      });
+      document.getElementById('assignModal').addEventListener('click', (e) => {
+        if (e.target === document.getElementById('assignModal')) closeAssignModal();
+      });
+      document.getElementById('completeModal').addEventListener('click', (e) => {
+        if (e.target === document.getElementById('completeModal')) closeCompleteModal();
+      });
+      document.getElementById('viewModal').addEventListener('click', (e) => {
+        if (e.target === document.getElementById('viewModal')) closeViewModal();
+      });
+
+      // Search and filters
+      document.getElementById('searchInput').addEventListener(
+        'input',
+        debounce(() => filterRequests(), 300)
+      );
+      document.getElementById('statusFilter').addEventListener('change', filterRequests);
+      document.getElementById('priorityFilter').addEventListener('change', filterRequests);
+
+      // Apartment search
+      document.getElementById('createApartment').addEventListener('input', handleApartmentSearch);
+
+      // File uploads
+      document.getElementById('createPhotos').addEventListener('change', (e) => handleFileUpload(e, 'create'));
+      document.getElementById('completePhotos').addEventListener('change', (e) => handleFileUpload(e, 'complete'));
+    }
+
+    async function loadMaintenanceRequests() {
+      try {
+        const response = await maintenanceAPI.getMaintenanceRequests();
+        // Handle both array and object responses
+        allRequests = Array.isArray(response) ? response : (response.data || response.requests || []);
+        renderRequests(allRequests);
+      } catch (error) {
+        console.error('Error loading maintenance requests:', error);
+        showToast(`Lỗi tải yêu cầu bảo trì: ${error.message}`, 'error');
+      }
+    }
+
+    async function loadApartments() {
+      try {
+        const response = await buildingAPI.getApartments();
+        // Handle both array and object responses
+        allApartments = Array.isArray(response) ? response : (response.data || response.apartments || []);
+      } catch (error) {
+        console.error('Error loading apartments:', error);
+        showToast(`Lỗi tải căn hộ: ${error.message}`, 'error');
+      }
+    }
+
+    async function loadStaff() {
+      try {
+        const response = await residentAPI.getResidents();
+        // Handle both array and object responses
+        const staffData = Array.isArray(response) ? response : (response.data || response.residents || []);
+        allStaff = staffData.filter(r => [ROLES.STAFF, ROLES.MANAGER].includes(r.role));
+        populateStaffDropdowns();
+      } catch (error) {
+        console.error('Error loading staff:', error);
+      }
+    }
+
+    function populateStaffDropdowns() {
+      const createSelect = document.getElementById('createAssignTo');
+      const assignSelect = document.getElementById('assignStaff');
+
+      [createSelect, assignSelect].forEach(select => {
+        const currentValue = select.value;
+        select.innerHTML = '<option value="">-- Không chọn --</option>';
+        allStaff.forEach((staff) => {
+          const option = document.createElement('option');
+          option.value = staff.id;
+          option.textContent = staff.name;
+          select.appendChild(option);
+        });
+        select.value = currentValue;
+      });
+    }
+
+    function handleApartmentSearch() {
+      const input = document.getElementById('createApartment');
+      const dropdown = document.getElementById('apartmentDropdown');
+      const searchTerm = input.value.toLowerCase();
+
+      if (searchTerm.length === 0) {
+        dropdown.style.display = 'none';
+        return;
+      }
+
+      const filtered = allApartments.filter(apt =>
+        (apt.apartment_number || '').toLowerCase().includes(searchTerm) ||
+        (apt.name || '').toLowerCase().includes(searchTerm)
+      );
+
+      if (filtered.length === 0) {
+        dropdown.style.display = 'none';
+        return;
+      }
+
+      dropdown.innerHTML = filtered
+        .slice(0, 10)
+        .map(apt => `
+          <div style="padding: 10px; cursor: pointer; border-bottom: 1px solid #eee; hover-background: #f5f5f5;" 
+               onclick="window.maintenanceApp.selectApartment('${apt.id}', '${apt.apartment_number || apt.name}')">
+            ${apt.apartment_number || apt.name}
+          </div>
+        `)
+        .join('');
+      dropdown.style.display = 'block';
+    }
+
+    function handleFileUpload(e, type) {
+      const files = Array.from(e.target.files);
+      const photosArray = type === 'create' ? createPhotos : completePhotos;
+      const previewId = type === 'create' ? 'createPhotoPreview' : 'completePhotoPreview';
+
+      files.forEach(file => {
+        if (file.type.startsWith('image/')) {
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            const photoData = {
+              name: file.name,
+              data: event.target.result,
+              file: file
+            };
+            photosArray.push(photoData);
+            renderPhotoPreview(previewId, photosArray);
+          };
+          reader.readAsDataURL(file);
+        }
+      });
+
+      e.target.value = '';
+    }
+
+    function renderPhotoPreview(previewId, photosArray) {
+      const preview = document.getElementById(previewId);
+      preview.innerHTML = photosArray
+        .map((photo, index) => `
+          <div class="file-preview-item">
+            <img src="${photo.data}" alt="${photo.name}" />
+            <button type="button" class="file-remove-btn" 
+                    onclick="window.maintenanceApp.removePhoto('${previewId}', ${index})">
+              ✕
+            </button>
+          </div>
+        `)
+        .join('');
+    }
+
+    function renderRequests(requests) {
+      const container = document.getElementById('maintenanceContainer');
+
+      if (requests.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">🔧</div>
+            <p>Không có yêu cầu bảo trì nào</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th>Yêu cầu #</th>
+              <th>Căn hộ</th>
+              <th>Loại vấn đề</th>
+              <th>Mức độ</th>
+              <th>Trạng thái</th>
+              <th>Phân công cho</th>
+              <th>Ngày tạo</th>
+              <th>Thao tác</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${requests.map(request => `
+              <tr>
+                <td><strong>#${request.request_number || request.id.slice(0, 8)}</strong></td>
+                <td>${request.apartment_number || '-'}</td>
+                <td>${getIssueTypeLabel(request.issue_type)}</td>
+                <td>
+                  <span class="priority-badge priority-${request.priority}">
+                    ${getPriorityLabel(request.priority)}
+                  </span>
+                </td>
+                <td>
+                  <span class="status-badge status-${request.status}">
+                    ${getStatusLabel(request.status)}
+                  </span>
+                </td>
+                <td>${request.assigned_to_name || '-'}</td>
+                <td>${formatDate(request.created_date)}</td>
+                <td>
+                  <div class="action-btns">
+                    <button class="btn-sm" onclick="window.maintenanceApp.viewDetails('${request.id}')">Chi tiết</button>
+                    ${request.status === MAINTENANCE_STATUS.NEW ? `
+                      <button class="btn-sm" onclick="window.maintenanceApp.openAssignModal('${request.id}')">Phân công</button>
+                    ` : ''}
+                    ${[MAINTENANCE_STATUS.ASSIGNED, MAINTENANCE_STATUS.IN_PROGRESS].includes(request.status) ? `
+                      <button class="btn-sm success" onclick="window.maintenanceApp.openCompleteModal('${request.id}')">Hoàn thành</button>
+                    ` : ''}
+                    ${[MAINTENANCE_STATUS.NEW, MAINTENANCE_STATUS.ASSIGNED].includes(request.status) ? `
+                      <button class="btn-sm danger" onclick="window.maintenanceApp.cancelRequest('${request.id}')">Hủy</button>
+                    ` : ''}
+                  </div>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+    }
+
+    function filterRequests() {
+      const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+      const statusFilter = document.getElementById('statusFilter').value;
+      const priorityFilter = document.getElementById('priorityFilter').value;
+
+      filteredRequests = allRequests.filter(request => {
+        const matchesSearch =
+          (request.apartment_number || '').toLowerCase().includes(searchTerm) ||
+          (request.issue_type || '').toLowerCase().includes(searchTerm) ||
+          (request.description || '').toLowerCase().includes(searchTerm);
+        const matchesStatus = !statusFilter || request.status === statusFilter;
+        const matchesPriority = !priorityFilter || request.priority === priorityFilter;
+
+        return matchesSearch && matchesStatus && matchesPriority;
+      });
+
+      renderRequests(filteredRequests);
+    }
+
+    function updateKPIs() {
+      let newCount = 0;
+      let inProgressCount = 0;
+      let completedCount = 0;
+      let urgentCount = 0;
+
+      allRequests.forEach(request => {
+        if (request.status === MAINTENANCE_STATUS.NEW) newCount++;
+        if (request.status === MAINTENANCE_STATUS.IN_PROGRESS) inProgressCount++;
+        if (request.status === MAINTENANCE_STATUS.COMPLETED) completedCount++;
+        if (request.priority === MAINTENANCE_PRIORITY.URGENT) urgentCount++;
+      });
+
+      document.getElementById('newRequestsCount').textContent = newCount;
+      document.getElementById('inProgressCount').textContent = inProgressCount;
+      document.getElementById('completedCount').textContent = completedCount;
+      document.getElementById('urgentCount').textContent = urgentCount;
+    }
+
+    function openCreateModal() {
+      document.getElementById('createModalTitle').textContent = 'Tạo yêu cầu bảo trì';
+      resetCreateForm();
+      document.getElementById('createModal').classList.add('show');
+    }
+
+    function closeCreateModal() {
+      document.getElementById('createModal').classList.remove('show');
+      resetCreateForm();
+    }
+
+    function resetCreateForm() {
+      document.getElementById('createForm').reset();
+      createPhotos = [];
+      document.getElementById('createPhotoPreview').innerHTML = '';
+      document.getElementById('createFormError').classList.remove('show');
+    }
+
+    function openAssignModal(requestId) {
+      selectedRequestId = requestId;
+      document.getElementById('assignNotes').value = '';
+      document.getElementById('assignStaff').value = '';
+      document.getElementById('assignFormError').classList.remove('show');
+      document.getElementById('assignModal').classList.add('show');
+    }
+
+    function closeAssignModal() {
+      document.getElementById('assignModal').classList.remove('show');
+      selectedRequestId = null;
+    }
+
+    function openCompleteModal(requestId) {
+      selectedRequestId = requestId;
+      const request = allRequests.find(r => r.id === requestId);
+      
+      document.getElementById('completeResolution').value = '';
+      document.getElementById('completeNotes').value = '';
+      document.getElementById('completeCost').value = '';
+      document.getElementById('completeTechnician').value = request?.assigned_to_name || '';
+      completePhotos = [];
+      document.getElementById('completePhotoPreview').innerHTML = '';
+      document.getElementById('completeFormError').classList.remove('show');
+      document.getElementById('completeModal').classList.add('show');
+    }
+
+    function closeCompleteModal() {
+      document.getElementById('completeModal').classList.remove('show');
+      selectedRequestId = null;
+    }
+
+    function closeViewModal() {
+      document.getElementById('viewModal').classList.remove('show');
+    }
+
+    async function handleCreateRequest(e) {
+      e.preventDefault();
+
+      const apartmentId = document.getElementById('createApartment').dataset.apartmentId;
+      const issueType = document.getElementById('createIssueType').value;
+      const priority = document.querySelector('input[name="priorityLevel"]:checked').value;
+      const description = document.getElementById('createDescription').value;
+      const assignTo = document.getElementById('createAssignTo').value || null;
+
+      if (!apartmentId || !issueType || !priority || !description) {
+        showFormError('createFormError', 'Vui lòng điền đầy đủ thông tin bắt buộc');
+        return;
+      }
+
+      try {
+        const apartment = allApartments.find(a => a.id === apartmentId);
+        
+        const requestData = {
+          apartment_id: apartmentId,
+          apartment_number: apartment?.apartment_number || 'N/A',
+          issue_type: issueType,
+          priority: priority,
+          description: description,
+          assigned_to: assignTo,
+          status: assignTo ? MAINTENANCE_STATUS.ASSIGNED : MAINTENANCE_STATUS.NEW,
+          photos: createPhotos.map(p => p.data),
+          created_date: new Date().toISOString(),
+        };
+
+        const response = await maintenanceAPI.createMaintenanceRequest(requestData);
+
+        if (response.success || response.data) {
+          showToast('Yêu cầu bảo trì đã được tạo thành công', 'success');
+          closeCreateModal();
+          await loadMaintenanceRequests();
+          updateKPIs();
+        }
+      } catch (error) {
+        console.error('Error creating request:', error);
+        showFormError('createFormError', error.message || 'Lỗi tạo yêu cầu bảo trì');
+      }
+    }
+
+    async function handleAssignRequest(e) {
+      e.preventDefault();
+
+      const staffId = document.getElementById('assignStaff').value;
+      const notes = document.getElementById('assignNotes').value;
+
+      if (!staffId) {
+        showFormError('assignFormError', 'Vui lòng chọn nhân viên');
+        return;
+      }
+
+      try {
+        const staff = allStaff.find(s => s.id === staffId);
+        
+        const assignData = {
+          assigned_to: staffId,
+          assigned_to_name: staff?.name,
+          notes: notes,
+        };
+
+        const response = await maintenanceAPI.assignMaintenanceRequest(selectedRequestId, assignData);
+
+        if (response.success || response.data) {
+          showToast('Yêu cầu đã được phân công thành công', 'success');
+          closeAssignModal();
+          await loadMaintenanceRequests();
+          updateKPIs();
+        }
+      } catch (error) {
+        console.error('Error assigning request:', error);
+        showFormError('assignFormError', error.message || 'Lỗi phân công yêu cầu');
+      }
+    }
+
+    async function handleCompleteRequest(e) {
+      e.preventDefault();
+
+      const resolution = document.getElementById('completeResolution').value;
+      const notes = document.getElementById('completeNotes').value;
+      const cost = parseFloat(document.getElementById('completeCost').value) || 0;
+      const technician = document.getElementById('completeTechnician').value;
+
+      if (!resolution) {
+        showFormError('completeFormError', 'Vui lòng mô tả giải pháp');
+        return;
+      }
+
+      try {
+        const completeData = {
+          resolution: resolution,
+          notes: notes,
+          cost: cost,
+          technician_name: technician,
+          photos: completePhotos.map(p => p.data),
+          completed_date: new Date().toISOString(),
+        };
+
+        const response = await maintenanceAPI.completeMaintenanceRequest(selectedRequestId, completeData);
+
+        if (response.success || response.data) {
+          showToast('Yêu cầu bảo trì đã được hoàn thành', 'success');
+          closeCompleteModal();
+          await loadMaintenanceRequests();
+          updateKPIs();
+        }
+      } catch (error) {
+        console.error('Error completing request:', error);
+        showFormError('completeFormError', error.message || 'Lỗi hoàn thành yêu cầu');
+      }
+    }
+
+    function showFormError(elementId, message) {
+      const element = document.getElementById(elementId);
+      element.textContent = message;
+      element.classList.add('show');
+    }
+
+    function getStatusLabel(status) {
+      const labels = {
+        [MAINTENANCE_STATUS.NEW]: 'Mới',
+        [MAINTENANCE_STATUS.ASSIGNED]: 'Đã phân công',
+        [MAINTENANCE_STATUS.IN_PROGRESS]: 'Đang xử lý',
+        [MAINTENANCE_STATUS.COMPLETED]: 'Hoàn thành',
+        [MAINTENANCE_STATUS.CANCELLED]: 'Hủy bỏ',
+      };
+      return labels[status] || status;
+    }
+
+    function getPriorityLabel(priority) {
+      const labels = {
+        [MAINTENANCE_PRIORITY.LOW]: 'Thấp',
+        [MAINTENANCE_PRIORITY.MEDIUM]: 'Trung bình',
+        [MAINTENANCE_PRIORITY.HIGH]: 'Cao',
+        [MAINTENANCE_PRIORITY.URGENT]: 'Khẩn cấp',
+      };
+      return labels[priority] || priority;
+    }
+
+    function getIssueTypeLabel(issueType) {
+      const labels = {
+        plumbing: 'Cấp nước / Thoát nước',
+        electrical: 'Điện / Điện tử',
+        structural: 'Kết cấu / Vách tường',
+        appliances: 'Thiết bị / Nội thất',
+        cleaning: 'Vệ sinh / Dọn dẹp',
+        other: 'Khác',
+      };
+      return labels[issueType] || issueType;
+    }
+
+    // Public methods for onclick handlers
+    window.maintenanceApp = {
+      selectApartment: (apartmentId, apartmentNumber) => {
+        document.getElementById('createApartment').value = apartmentNumber;
+        document.getElementById('createApartment').dataset.apartmentId = apartmentId;
+        document.getElementById('apartmentDropdown').style.display = 'none';
+      },
+      removePhoto: (previewId, index) => {
+        const photosArray = previewId === 'createPhotoPreview' ? createPhotos : completePhotos;
+        photosArray.splice(index, 1);
+        renderPhotoPreview(previewId, photosArray);
+      },
+      viewDetails: async (requestId) => {
+        const request = allRequests.find(r => r.id === requestId);
+        if (!request) return;
+
+        const detailsHtml = `
+          <div style="line-height: 1.8;">
+            <div style="margin-bottom: 15px;">
+              <strong style="color: #667eea;">Yêu cầu #${request.request_number || request.id.slice(0, 8)}</strong>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+              <div>
+                <strong style="color: #666; font-size: 12px; text-transform: uppercase;">Căn hộ</strong><br/>
+                ${request.apartment_number || '-'}
+              </div>
+              <div>
+                <strong style="color: #666; font-size: 12px; text-transform: uppercase;">Loại vấn đề</strong><br/>
+                ${getIssueTypeLabel(request.issue_type)}
+              </div>
+              <div>
+                <strong style="color: #666; font-size: 12px; text-transform: uppercase;">Mức độ</strong><br/>
+                <span class="priority-badge priority-${request.priority}">${getPriorityLabel(request.priority)}</span>
+              </div>
+              <div>
+                <strong style="color: #666; font-size: 12px; text-transform: uppercase;">Trạng thái</strong><br/>
+                <span class="status-badge status-${request.status}">${getStatusLabel(request.status)}</span>
+              </div>
+              <div>
+                <strong style="color: #666; font-size: 12px; text-transform: uppercase;">Ngày tạo</strong><br/>
+                ${formatDate(request.created_date)}
+              </div>
+              <div>
+                <strong style="color: #666; font-size: 12px; text-transform: uppercase;">Phân công cho</strong><br/>
+                ${request.assigned_to_name || '-'}
+              </div>
+            </div>
+            <div style="margin-bottom: 15px;">
+              <strong style="color: #666; font-size: 12px; text-transform: uppercase;">Mô tả</strong><br/>
+              ${request.description || '-'}
+            </div>
+            ${request.resolution ? `
+              <div style="margin-bottom: 15px; padding: 10px; background: #e8f5e9; border-left: 3px solid #4CAF50; border-radius: 3px;">
+                <strong style="color: #2e7d32;">Giải pháp</strong><br/>
+                ${request.resolution}
+              </div>
+            ` : ''}
+            ${request.cost ? `
+              <div style="margin-bottom: 15px;">
+                <strong style="color: #666; font-size: 12px; text-transform: uppercase;">Chi phí</strong><br/>
+                ${request.cost.toLocaleString('vi-VN')} VND
+              </div>
+            ` : ''}
+            ${request.completed_date ? `
+              <div style="margin-bottom: 15px;">
+                <strong style="color: #666; font-size: 12px; text-transform: uppercase;">Ngày hoàn thành</strong><br/>
+                ${formatDate(request.completed_date)}
+              </div>
+            ` : ''}
+          </div>
+        `;
+
+        document.getElementById('viewDetails').innerHTML = detailsHtml;
+        document.getElementById('viewModal').classList.add('show');
+      },
+      openAssignModal,
+      openCompleteModal,
+      cancelRequest: async (requestId) => {
+        if (!confirm('Bạn có chắc chắn muốn hủy yêu cầu này?')) return;
+        
+        try {
+          const response = await maintenanceAPI.updateMaintenanceStatus(requestId, MAINTENANCE_STATUS.CANCELLED);
+          if (response.success || response.data) {
+            showToast('Yêu cầu đã được hủy', 'success');
+            await loadMaintenanceRequests();
+            updateKPIs();
+          }
+        } catch (error) {
+          showToast(`Lỗi: ${error.message}`, 'error');
+        }
+      },
+    };
+
+    // Hide apartment dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+      if (e.target.id !== 'createApartment' && !e.target.closest('#apartmentDropdown')) {
+        document.getElementById('apartmentDropdown').style.display = 'none';
+      }
+    });
+
+    // Initialize the page
+    init();
+  </script>
+</body>
+</html>

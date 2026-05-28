@@ -165,6 +165,22 @@ require([
     });
     map.add(layer);
 
+    // Layer riêng cho trạng thái căn hộ (GIS UC 2.7.8–2.7.12)
+    const statusLayer = new GraphicsLayer({
+        title: "Trạng thái căn hộ",
+        elevationInfo: { mode: "relative-to-ground" }
+    });
+    map.add(statusLayer);
+
+    function addStatusBox(opts) {
+        const g = addBox(opts);
+        if (g) {
+            layer.remove(g);
+            statusLayer.add(g);
+        }
+        return g;
+    }
+
     // Khởi tạo các cấu hình mặc định bổ sung cho bảng điều khiển BIM
     window.WPConfig = window.WPConfig || {};
     window.WPConfig.currentHeightLimit = 160;
@@ -377,8 +393,11 @@ require([
 
     window.WPEngine = {
         addBox: addBox,
+        addStatusBox: addStatusBox,
+        clearStatusOverlay: function () { statusLayer.removeAll(); },
         addCylinder: addCylinder,
         layer: layer,
+        statusLayer: statusLayer,
         Mesh: Mesh,
         Point: Point,
         Graphic: Graphic,
@@ -729,6 +748,15 @@ require([
                         
                         let html = `<div class="readout-field"><span class="readout-label">Tên phần tử:</span><span class="readout-value" style="color:#00f2fe">${attr.name}</span></div>`;
                         
+                        if (attr.statusLabel || attr.status) {
+                            html += `<div class="readout-field"><span class="readout-label">Trạng thái:</span><span class="readout-value">${attr.statusLabel || attr.status}</span></div>`;
+                        }
+                        if (attr.resident) {
+                            html += `<div class="readout-field"><span class="readout-label">Cư dân:</span><span class="readout-value">${attr.resident}</span></div>`;
+                        }
+                        if (attr.contractEnd) {
+                            html += `<div class="readout-field"><span class="readout-label">Hết HĐ:</span><span class="readout-value">${attr.contractEnd}</span></div>`;
+                        }
                         if (attr.id) {
                             html += `<div class="readout-field"><span class="readout-label">Mã phân khu:</span><span class="readout-value">${attr.id}</span></div>`;
                         }

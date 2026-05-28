@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Resident Portal - Vinhomes</title>
+  <link rel="stylesheet" href="../css/admin.css" />
+</head>
+<body>
+  <div id="navbar-placeholder"></div>
+  <div class="container">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Resident Portal</h1>
+        <p class="page-subtitle">UC 2.7.47 — Tổng quan cá nhân</p>
+      </div>
+    </div>
+
+    <!-- Quick links -->
+    <div class="quick-links">
+      <a class="quick-link" href="/index.html" target="_blank">
+        <div class="icon">🏠</div>
+        <div class="label">Xem căn hộ 3D</div>
+      </a>
+      <a class="quick-link" href="/pages/contracts.html">
+        <div class="icon">📄</div>
+        <div class="label">Hợp đồng</div>
+      </a>
+      <a class="quick-link" href="/pages/invoices.html">
+        <div class="icon">💰</div>
+        <div class="label">Hóa đơn</div>
+      </a>
+      <a class="quick-link" href="/pages/maintenance.html">
+        <div class="icon">🔧</div>
+        <div class="label">Gửi bảo trì</div>
+      </a>
+      <a class="quick-link" href="/pages/notifications.html">
+        <div class="icon">🔔</div>
+        <div class="label">Thông báo</div>
+      </a>
+      <a class="quick-link" href="/pages/profile.html">
+        <div class="icon">👤</div>
+        <div class="label">Tài khoản</div>
+      </a>
+    </div>
+
+    <!-- KPI cards -->
+    <div class="kpi-grid" id="kpiGrid">
+      <div class="loading"><div class="spinner"></div></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">
+        <span>Hóa đơn chờ thanh toán</span>
+        <a href="/pages/invoices.html">Xem tất cả</a>
+      </div>
+      <div id="pendingInvoices"><div class="empty-state"><div class="empty-state-icon">✓</div><p>Không có hóa đơn chờ thanh toán</p></div></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">
+        <span>Yêu cầu bảo trì đang xử lý</span>
+        <a href="/pages/maintenance.html">Xem tất cả</a>
+      </div>
+      <div id="activeMaintenance"><div class="empty-state"><div class="empty-state-icon">✓</div><p>Không có yêu cầu bảo trì</p></div></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initLayout } from '../js/modules/layout.js';
+    import authManager from '../js/modules/auth-manager.js';
+    import invoiceAPI from '../js/api/invoices.js';
+    import maintenanceAPI from '../js/api/maintenance.js';
+    import notificationAPI from '../js/api/notifications.js';
+    import { formatCurrency, formatDate } from '../js/utils/helpers.js';
+
+    await initLayout({ requiredRoles: ['resident'] });
+
+    const user = authManager.getCurrentUser();
+
+    async function loadDashboard() {
+      const kpiGrid = document.getElementById('kpiGrid');
+      let unread = 0, pendingInvoices = [], maintenance = [];
+
+      try {
+        const [notifRes, invRes, maintRes] = await Promise.allSettled([
+          notificationAPI.getUnreadNotifications(),
+          invoiceAPI.getInvoices(),
+          maintenanceAPI.getMaintenanceRequests(),
+        ]);
+        if (notifRes.status === 'fulfilled') unread = (notifRes.value.data || []).length;
+        if (invRes.status === 'fulfilled') {
+          pendingInvoices = (invRes.value.data || []).filter(i =>
+            ['pending', 'issued', 'overdue'].includes(i.status)
+          );
+        }
+        if (maintRes.status === 'fulfilled') {
+          maintenance = (maintRes.value.data || []).filter(r =>
+            !['completed', 'cancelled'].includes(r.status)
+          );
+        }
+      } catch (_) {}
+
+      kpiGrid.innerHTML = `
+        <div class="kpi-card blue">
+          <div class="kpi-label">Xin chào</div>
+          <div class="kpi-value" style="font-size:20px">${user?.name || user?.username || 'Cư dân'}</div>
+          <div class="kpi-sub">Vinhomes West Point</div>
+        </div>
+        <div class="kpi-card orange">
+          <div class="kpi-label">Hóa đơn chờ thanh toán</div>
+          <div class="kpi-value">${pendingInvoices.length}</div>
+          <div class="kpi-sub">${formatCurrency(pendingInvoices.reduce((s,i)=>s+(i.total_amount||0),0))}</div>
+        </div>
+        <div class="kpi-card green">
+          <div class="kpi-label">Bảo trì đang xử lý</div>
+          <div class="kpi-value">${maintenance.length}</div>
+          <div class="kpi-sub">Yêu cầu chưa hoàn thành</div>
+        </div>
+        <div class="kpi-card red">
+          <div class="kpi-label">Thông báo chưa đọc</div>
+          <div class="kpi-value">${unread}</div>
+          <div class="kpi-sub"><a href="/pages/notifications.html">Xem ngay →</a></div>
+        </div>
+      `;
+
+      renderPendingInvoices(pendingInvoices.slice(0, 5));
+      renderMaintenance(maintenance.slice(0, 5));
+    }
+
+    function renderPendingInvoices(invoices) {
+      const el = document.getElementById('pendingInvoices');
+      if (!invoices.length) return;
+      el.innerHTML = `<div class="table-responsive"><table>
+        <thead><tr><th>Mã HĐ</th><th>Kỳ</th><th>Số tiền</th><th>Hạn</th><th>Trạng thái</th></tr></thead>
+        <tbody>${invoices.map(i => `<tr>
+          <td>${i.invoice_code || i.id}</td>
+          <td>${i.billing_period || '-'}</td>
+          <td>${formatCurrency(i.total_amount)}</td>
+          <td>${formatDate(i.due_date)}</td>
+          <td><span class="badge badge-orange">${i.status}</span></td>
+        </tr>`).join('')}</tbody></table></div>`;
+    }
+
+    function renderMaintenance(requests) {
+      const el = document.getElementById('activeMaintenance');
+      if (!requests.length) return;
+      el.innerHTML = `<div class="table-responsive"><table>
+        <thead><tr><th>Mã</th><th>Loại</th><th>Ưu tiên</th><th>Trạng thái</th><th>Ngày tạo</th></tr></thead>
+        <tbody>${requests.map(r => `<tr>
+          <td>${r.request_code || r.id}</td>
+          <td>${r.issue_type || '-'}</td>
+          <td><span class="badge badge-red">${r.priority}</span></td>
+          <td><span class="badge badge-blue">${r.status}</span></td>
+          <td>${formatDate(r.created_at)}</td>
+        </tr>`).join('')}</tbody></table></div>`;
+    }
+
+    loadDashboard();
+  </script>
+</body>
+</html>
