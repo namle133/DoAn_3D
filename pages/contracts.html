@@ -790,11 +790,14 @@
             </tr>
           </thead>
           <tbody>
-            ${data.map((contract) => `
+            ${data.map((contract) => {
+              const resident = residents.find(r => r.id === (contract.resident_id || contract.ResidentID));
+              const apartment = apartments.find(a => a.id === (contract.apartment_id || contract.ApartmentID));
+              return `
               <tr>
                 <td>${contract.number || contract.id}</td>
-                <td>${contract.resident_name || '-'}</td>
-                <td>${contract.apartment_number || '-'}</td>
+                <td>${resident?.full_name || resident?.name || contract.resident_name || '-'}</td>
+                <td>${apartment?.number || apartment?.apartment_code || contract.apartment_number || '-'}</td>
                 <td>${formatDate(contract.start_date)}</td>
                 <td>${formatDate(contract.end_date)}</td>
                 <td>${formatCurrency(contract.monthly_rent || 0)}</td>
@@ -808,7 +811,8 @@
                   </div>
                 </td>
               </tr>
-            `).join('')}
+              `;
+            }).join('')}
           </tbody>
         </table>
       `;
@@ -926,10 +930,15 @@
     window.viewContract = async (id) => {
       try {
         const response = await contractAPI.getContractByID(id);
-        const contract = response.data;
+        const contract = Array.isArray(response) ? response[0] : (response.data || response);
 
-        const resident = residents.find((r) => r.id === contract.resident_id);
-        const apartment = apartments.find((a) => a.id === contract.apartment_id);
+        if (!contract) {
+          showToast('Không tìm thấy hợp đồng', 'error');
+          return;
+        }
+
+        const resident = residents.find((r) => r.id === (contract.resident_id || contract.ResidentID));
+        const apartment = apartments.find((a) => a.id === (contract.apartment_id || contract.ApartmentID));
 
         const viewContent = document.getElementById('viewContent');
         viewContent.innerHTML = `
@@ -960,7 +969,7 @@
             </div>
             <div class="detail-row">
               <div class="detail-label">Tiền cọc:</div>
-              <div class="detail-value">${formatCurrency(contract.deposit_amount || 0)}</div>
+              <div class="detail-value">${formatCurrency(contract.deposit || 0)}</div>
             </div>
             <div class="detail-row">
               <div class="detail-label">Trạng thái:</div>
