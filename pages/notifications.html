@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Thông báo - Vinhomes</title>
+  <link rel="stylesheet" href="../css/admin.css" />
+</head>
+<body>
+  <div id="navbar-placeholder"></div>
+  <div class="container">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Thông báo</h1>
+        <p class="page-subtitle">UC 2.7.45 — Quản lý thông báo hệ thống</p>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-outline" id="markAllReadBtn">Đánh dấu tất cả đã đọc</button>
+        <button class="btn btn-primary" id="composeBtn" style="display:none">+ Soạn thông báo</button>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="all">Tất cả</button>
+      <button class="tab-btn" data-tab="unread">Chưa đọc</button>
+    </div>
+
+    <div class="section" id="notifList">
+      <div class="loading"><div class="spinner"></div><p>Đang tải...</p></div>
+    </div>
+  </div>
+
+  <!-- Modal soạn thông báo (Manager) -->
+  <div class="modal" id="composeModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Soạn thông báo</h2>
+        <button class="close-btn" id="closeCompose">&times;</button>
+      </div>
+      <form id="composeForm">
+        <div class="form-group">
+          <label>Tiêu đề</label>
+          <input type="text" id="notifTitle" required />
+        </div>
+        <div class="form-group">
+          <label>Nội dung</label>
+          <textarea id="notifMessage" rows="4" required></textarea>
+        </div>
+        <div class="form-group">
+          <label>Loại</label>
+          <select id="notifType">
+            <option value="general">Thông báo chung</option>
+            <option value="contract_expiring">Hợp đồng sắp hết hạn</option>
+            <option value="invoice_overdue">Hóa đơn quá hạn</option>
+            <option value="maintenance_update">Cập nhật bảo trì</option>
+          </select>
+        </div>
+        <div class="form-buttons">
+          <button type="button" class="btn-cancel" id="cancelCompose">Hủy</button>
+          <button type="submit" class="btn btn-primary">Gửi</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initLayout } from '../js/modules/layout.js';
+    import authManager from '../js/modules/auth-manager.js';
+    import notificationAPI from '../js/api/notifications.js';
+    import { formatDate, showToast } from '../js/utils/helpers.js';
+
+    await initLayout();
+    const role = authManager.getUserRole();
+    if (['admin', 'manager'].includes(role)) {
+      document.getElementById('composeBtn').style.display = 'inline-flex';
+    }
+
+    let allNotifications = [];
+    let currentTab = 'all';
+
+    async function loadNotifications() {
+      try {
+        const res = await notificationAPI.getUserNotifications();
+        allNotifications = res.data || [];
+        renderList();
+      } catch (err) {
+        document.getElementById('notifList').innerHTML =
+          `<div class="empty-state"><div class="empty-state-icon">⚠️</div><p>${err.message}</p></div>`;
+      }
+    }
+
+    function renderList() {
+      const list = currentTab === 'unread'
+        ? allNotifications.filter(n => !n.is_read)
+        : allNotifications;
+
+      const el = document.getElementById('notifList');
+      if (!list.length) {
+        el.innerHTML = `<div class="empty-state"><div class="empty-state-icon">🔔</div><p>Không có thông báo</p></div>`;
+        return;
+      }
+
+      el.innerHTML = list.map(n => `
+        <div style="padding:14px 0;border-bottom:1px solid #f0f0f0;display:flex;justify-content:space-between;align-items:flex-start;${n.is_read ? 'opacity:.7' : ''}">
+          <div style="flex:1">
+            <div style="font-weight:${n.is_read ? '400' : '700'};margin-bottom:4px">${n.title}</div>
+            <div style="font-size:13px;color:#666;margin-bottom:6px">${n.message}</div>
+            <div style="font-size:11px;color:#999">${formatDate(n.created_at, 'dd/mm/yyyy hh:mm')} · ${n.type || 'general'}</div>
+          </div>
+          <div style="display:flex;gap:6px;margin-left:12px">
+            ${!n.is_read ? `<button class="btn btn-sm btn-outline mark-read" data-id="${n.id}">Đã đọc</button>` : ''}
+            <button class="btn btn-sm btn-danger delete-notif" data-id="${n.id}">Xóa</button>
+          </div>
+        </div>
+      `).join('');
+
+      el.querySelectorAll('.mark-read').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          await notificationAPI.markNotificationAsRead(btn.dataset.id);
+          showToast('Đã đánh dấu đọc', 'success');
+          loadNotifications();
+        });
+      });
+      el.querySelectorAll('.delete-notif').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (confirm('Xóa thông báo này?')) {
+            await notificationAPI.deleteNotification(btn.dataset.id);
+            showToast('Đã xóa', 'success');
+            loadNotifications();
+          }
+        });
+      });
+    }
+
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentTab = btn.dataset.tab;
+        renderList();
+      });
+    });
+
+    document.getElementById('markAllReadBtn').addEventListener('click', async () => {
+      await notificationAPI.markAllNotificationsAsRead();
+      showToast('Đã đánh dấu tất cả đã đọc', 'success');
+      loadNotifications();
+    });
+
+    const modal = document.getElementById('composeModal');
+    document.getElementById('composeBtn').addEventListener('click', () => modal.classList.add('show'));
+    document.getElementById('closeCompose').addEventListener('click', () => modal.classList.remove('show'));
+    document.getElementById('cancelCompose').addEventListener('click', () => modal.classList.remove('show'));
+
+    document.getElementById('composeForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        await notificationAPI.createNotification({
+          title: document.getElementById('notifTitle').value,
+          message: document.getElementById('notifMessage').value,
+          type: document.getElementById('notifType').value,
+        });
+        modal.classList.remove('show');
+        showToast('Đã gửi thông báo', 'success');
+        loadNotifications();
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    });
+
+    loadNotifications();
+  </script>
+</body>
+</html>

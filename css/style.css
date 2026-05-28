@@ -622,3 +622,46 @@ input:checked + .switch-slider:before {
 .esri-ui-top-left {
     left: 380px !important;
 }
+
+/* GIS Status filter panel */
+.gis-status-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+}
+.gis-status-info strong { color: #4CAF50; }
+.btn-sm-gis {
+    background: rgba(0,242,254,0.15);
+    border: 1px solid rgba(0,242,254,0.3);
+    color: #00f2fe;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 10px;
+    cursor: pointer;
+}
+.status-legend, .tower-filter {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 8px 0;
+    font-size: 11px;
+}
+.status-legend .checkmark.green { background: #4CAF50; }
+.status-legend .checkmark.blue { background: #2196F3; }
+.status-legend .checkmark.yellow { background: #FFC107; }
+.status-legend .checkmark.red { background: #F44336; }
+.floor-filter input[type=range] {
+    width: 100%;
+    margin: 4px 0;
+}
+.admin-link-gis {
+    display: block;
+    margin-top: 10px;
+    font-size: 11px;
+    color: #00f2fe;
+    text-decoration: none;
+}
+.admin-link-gis:hover { text-decoration: underline; }

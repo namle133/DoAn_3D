@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DEBUG - Residents API</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Courier New', monospace;
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 20px;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    h1 {
+      color: #4ec9b0;
+      margin-bottom: 20px;
+    }
+    .section {
+      background: #252526;
+      border: 1px solid #3e3e42;
+      border-radius: 5px;
+      padding: 15px;
+      margin-bottom: 20px;
+    }
+    .section h2 {
+      color: #569cd6;
+      font-size: 16px;
+      margin-bottom: 10px;
+    }
+    .info {
+      background: #1e1e1e;
+      border-left: 3px solid #007acc;
+      padding: 10px;
+      margin: 10px 0;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .success {
+      border-left-color: #4ec9b0;
+      color: #4ec9b0;
+    }
+    .error {
+      border-left-color: #f48771;
+      color: #f48771;
+    }
+    .warning {
+      border-left-color: #dcdcaa;
+      color: #dcdcaa;
+    }
+    button {
+      background: #007acc;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 3px;
+      cursor: pointer;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      margin: 5px 5px 5px 0;
+    }
+    button:hover {
+      background: #005a9e;
+    }
+    pre {
+      background: #1e1e1e;
+      border: 1px solid #3e3e42;
+      padding: 10px;
+      border-radius: 3px;
+      overflow-x: auto;
+      font-size: 12px;
+      line-height: 1.4;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid #3e3e42;
+      border-top-color: #007acc;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔧 DEBUG - Residents API Issue</h1>
+
+    <div class="section">
+      <h2>1️⃣ Authentication Status</h2>
+      <button onclick="checkAuth()">🔍 Check Auth</button>
+      <div id="authInfo"></div>
+    </div>
+
+    <div class="section">
+      <h2>2️⃣ Test API Request</h2>
+      <button onclick="testResidentsAPI()">🚀 Test /residents Endpoint</button>
+      <div id="apiResult"></div>
+    </div>
+
+    <div class="section">
+      <h2>3️⃣ Network Request Details</h2>
+      <div id="networkDetails"></div>
+    </div>
+
+    <div class="section">
+      <h2>4️⃣ Response Parsing Debug</h2>
+      <div id="parseDebug"></div>
+    </div>
+
+    <div class="section">
+      <h2>5️⃣ Troubleshooting Tips</h2>
+      <button onclick="runDiagnostics()">⚙️ Run Full Diagnostics</button>
+      <div id="diagnostics"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import authManager from './js/modules/auth-manager.js';
+    import residentAPI from './js/api/residents.js';
+    import apiClient from './js/api/client.js';
+
+    // Make functions global
+    window.checkAuth = checkAuth;
+    window.testResidentsAPI = testResidentsAPI;
+    window.runDiagnostics = runDiagnostics;
+
+    function log(elementId, message, type = 'info') {
+      const el = document.getElementById(elementId);
+      const div = document.createElement('div');
+      div.className = `info ${type}`;
+      div.textContent = message;
+      el.appendChild(div);
+    }
+
+    function clearLog(elementId) {
+      document.getElementById(elementId).innerHTML = '';
+    }
+
+    function checkAuth() {
+      clearLog('authInfo');
+      const isAuth = authManager.isAuthenticated();
+      const role = authManager.getUserRole();
+      const user = authManager.getCurrentUser();
+      const token = localStorage.getItem('vinhomes_auth_token');
+
+      log('authInfo', `✅ Authenticated: ${isAuth}`, isAuth ? 'success' : 'error');
+      log('authInfo', `Role: ${role}`, role ? 'success' : 'warning');
+      log('authInfo', `User: ${user?.name || user?.username || 'Not set'}`, user ? 'success' : 'warning');
+      log('authInfo', `Token: ${token ? `${token.substring(0, 20)}...` : 'Not set'}`, token ? 'success' : 'error');
+
+      if (!isAuth) {
+        log('authInfo', '❌ NOT AUTHENTICATED - Go to login first', 'error');
+      }
+
+      if (!['admin', 'manager', 'staff'].includes(role)) {
+        log('authInfo', `⚠️ Role "${role}" may not have access to residents API`, 'warning');
+      }
+    }
+
+    async function testResidentsAPI() {
+      clearLog('apiResult');
+      clearLog('networkDetails');
+      clearLog('parseDebug');
+
+      const resultEl = document.getElementById('apiResult');
+      resultEl.innerHTML = '<div class="info"><div class="spinner"></div> Calling /residents...</div>';
+
+      try {
+        // 1. Check auth first
+        if (!authManager.isAuthenticated()) {
+          throw new Error('Not authenticated - Go to login page first');
+        }
+
+        // 2. Make the actual request with debugging
+        console.log('🔍 Calling residentAPI.getResidents()...');
+
+        const response = await fetch('http://localhost:8080/api/v1/residents', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('vinhomes_auth_token')}`
+          }
+        });
+
+        // 3. Log network details
+        log('networkDetails', `Status: ${response.status} ${response.statusText}`, response.ok ? 'success' : 'error');
+        log('networkDetails', `Content-Type: ${response.headers.get('content-type')}`);
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          log('networkDetails', `Error Body: ${errorText}`, 'error');
+          throw new Error(`HTTP ${response.status}: ${errorText}`);
+        }
+
+        // 4. Parse response
+        const data = await response.json();
+        console.log('📦 Raw Response:', data);
+
+        // 5. Parse debug
+        log('parseDebug', `Response type: ${typeof data}`, 'info');
+        log('parseDebug', `Is Array? ${Array.isArray(data)}`, Array.isArray(data) ? 'success' : 'warning');
+
+        if (Array.isArray(data)) {
+          log('parseDebug', `Array length: ${data.length}`, data.length > 0 ? 'success' : 'warning');
+        } else if (data.data) {
+          log('parseDebug', `Has .data property? ${Array.isArray(data.data)}`, 'info');
+          log('parseDebug', `data.data length: ${data.data?.length || 0}`, data.data?.length > 0 ? 'success' : 'warning');
+        }
+
+        // 6. Show result
+        clearLog('apiResult');
+        if (Array.isArray(data) && data.length > 0) {
+          log('apiResult', `✅ SUCCESS: Got ${data.length} residents`, 'success');
+          log('apiResult', `First resident: ${JSON.stringify(data[0])}`, 'success');
+        } else if (data.data && Array.isArray(data.data) && data.data.length > 0) {
+          log('apiResult', `✅ SUCCESS: Got ${data.data.length} residents in response.data`, 'success');
+          log('apiResult', `First resident: ${JSON.stringify(data.data[0])}`, 'success');
+        } else {
+          log('apiResult', `⚠️ Empty response: ${JSON.stringify(data)}`, 'warning');
+        }
+
+        // Show full response
+        const pre = document.createElement('pre');
+        pre.textContent = JSON.stringify(data, null, 2);
+        document.getElementById('apiResult').appendChild(pre);
+
+      } catch (error) {
+        clearLog('apiResult');
+        log('apiResult', `❌ ERROR: ${error.message}`, 'error');
+        log('apiResult', `Stack: ${error.stack}`, 'error');
+        console.error('Full error:', error);
+      }
+    }
+
+    function runDiagnostics() {
+      clearLog('diagnostics');
+
+      const checks = [];
+
+      // 1. Backend reachable?
+      checks.push(fetch('http://localhost:8080/api/v1/residents', { method: 'HEAD' })
+        .then(() => ({ name: '✅ Backend reachable', status: true }))
+        .catch(() => ({ name: '❌ Backend not reachable on localhost:8080', status: false })));
+
+      // 2. Auth?
+      checks.push(Promise.resolve({
+        name: `${authManager.isAuthenticated() ? '✅' : '❌'} Authenticated`,
+        status: authManager.isAuthenticated()
+      }));
+
+      // 3. Role?
+      const role = authManager.getUserRole();
+      checks.push(Promise.resolve({
+        name: `${['admin', 'manager', 'staff'].includes(role) ? '✅' : '❌'} Role has access (${role})`,
+        status: ['admin', 'manager', 'staff'].includes(role)
+      }));
+
+      // 4. Token?
+      checks.push(Promise.resolve({
+        name: `${localStorage.getItem('vinhomes_auth_token') ? '✅' : '❌'} Token stored`,
+        status: !!localStorage.getItem('vinhomes_auth_token')
+      }));
+
+      Promise.all(checks).then(results => {
+        results.forEach(r => {
+          log('diagnostics', r.name, r.status ? 'success' : 'error');
+        });
+
+        const allPass = results.every(r => r.status);
+        if (allPass) {
+          log('diagnostics', '✅ All checks passed! If still no data, database might be empty.', 'success');
+        } else {
+          log('diagnostics', '⚠️ Some checks failed. Fix issues above first.', 'warning');
+        }
+      });
+    }
+  </script>
+</body>
+</html>

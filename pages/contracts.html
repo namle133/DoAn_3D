@@ -1072,7 +1072,7 @@
 
       try {
         if (currentActionType === 'approve') {
-          await contractAPI.approveContract(currentActionContractId);
+          await contractAPI.approveContract(currentActionContractId, { approved: true });
           showToast('Duyệt hợp đồng thành công', 'success');
         } else if (currentActionType === 'extend') {
           const newEndDate = document.getElementById('extendEndDate').value;

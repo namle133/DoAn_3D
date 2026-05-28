@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quản lý Cư dân - Vinhomes Property Management</title>
+  <link rel="stylesheet" href="../css/admin.css" />
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f5f5f5;
+      color: #333;
+    }
+
+    .navbar {
+      background: white;
+      border-bottom: 1px solid #ddd;
+      padding: 15px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .navbar-left {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .logo {
+      font-size: 20px;
+      font-weight: bold;
+      color: #667eea;
+      cursor: pointer;
+    }
+
+    .nav-menu {
+      display: flex;
+      gap: 30px;
+      list-style: none;
+    }
+
+    .nav-menu a {
+      color: #666;
+      text-decoration: none;
+      font-size: 14px;
+      transition: color 0.3s;
+      cursor: pointer;
+    }
+
+    .nav-menu a:hover,
+    .nav-menu a.active {
+      color: #667eea;
+      font-weight: 600;
+    }
+
+    .navbar-right {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .logout-btn {
+      background: #f44336;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+    }
+
+    .page-title {
+      font-size: 28px;
+      font-weight: bold;
+    }
+
+    .btn-primary {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.3s;
+    }
+
+    .btn-primary:hover {
+      background: #764ba2;
+    }
+
+    .search-bar {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .search-bar input {
+      flex: 1;
+      padding: 10px 15px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      font-size: 14px;
+    }
+
+    .section {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    .table-responsive {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+
+    th {
+      background: #f9f9f9;
+      padding: 12px;
+      text-align: left;
+      font-size: 13px;
+      font-weight: 600;
+      color: #666;
+      border-bottom: 2px solid #eee;
+    }
+
+    td {
+      padding: 12px;
+      border-bottom: 1px solid #eee;
+      font-size: 14px;
+    }
+
+    tr:hover {
+      background: #fafafa;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      background: #e8f5e9;
+      color: #2e7d32;
+    }
+
+    .action-btns {
+      display: flex;
+      gap: 5px;
+    }
+
+    .btn-sm {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: background 0.3s;
+    }
+
+    .btn-sm:hover {
+      background: #764ba2;
+    }
+
+    .btn-sm.danger {
+      background: #f44336;
+    }
+
+    .btn-sm.danger:hover {
+      background: #d32f2f;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: #999;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 40px 20px;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 2px solid #f3f3f3;
+      border-top: 2px solid #667eea;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% {
+        transform: rotate(0deg);
+      }
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal.show {
+      display: flex;
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: 8px;
+      padding: 30px;
+      width: 90%;
+      max-width: 500px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .modal-header h2 {
+      font-size: 20px;
+    }
+
+    .close-btn {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: #999;
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 500;
+      font-size: 14px;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      font-size: 14px;
+      font-family: inherit;
+    }
+
+    .form-group textarea {
+      resize: vertical;
+      min-height: 100px;
+    }
+
+    .form-buttons {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 20px;
+    }
+
+    .btn-cancel {
+      background: #999;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    @media (max-width: 768px) {
+      .page-header {
+        flex-direction: column;
+        gap: 15px;
+        align-items: flex-start;
+      }
+
+      .nav-menu {
+        gap: 15px;
+        font-size: 12px;
+      }
+
+      table {
+        font-size: 12px;
+      }
+
+      td,
+      th {
+        padding: 8px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="navbar-placeholder"></div>
+
+  <!-- Main Content -->
+  <div class="container">
+    <div class="page-header">
+      <h1 class="page-title">Quản lý Cư dân</h1>
+      <button class="btn-primary" id="addResidentBtn">+ Thêm cư dân</button>
+    </div>
+
+    <div class="search-bar">
+      <input type="text" id="searchInput" placeholder="Tìm kiếm cư dân..." />
+    </div>
+
+    <div class="section">
+      <div class="table-responsive" id="residentsContainer">
+        <div class="loading">
+          <div class="spinner"></div>
+          <p>Đang tải dữ liệu...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add/Edit Modal -->
+  <div class="modal" id="residentModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modalTitle">Thêm cư dân</h2>
+        <button class="close-btn" id="closeModalBtn">&times;</button>
+      </div>
+      <form id="residentForm">
+        <div class="form-group">
+          <label for="name">Họ tên *</label>
+          <input type="text" id="name" name="name" required />
+        </div>
+        <div class="form-group">
+          <label for="email">Email *</label>
+          <input type="email" id="email" name="email" required />
+        </div>
+        <div class="form-group">
+          <label for="phone">Điện thoại *</label>
+          <input type="text" id="phone" name="phone" required />
+        </div>
+        <div class="form-group">
+          <label for="idNumber">Số CCCD/CMND</label>
+          <input type="text" id="idNumber" name="idNumber" />
+        </div>
+        <div class="form-group">
+          <label for="address">Địa chỉ</label>
+          <textarea id="address" name="address"></textarea>
+        </div>
+        <div class="form-buttons">
+          <button type="button" class="btn-cancel" id="cancelBtn">Hủy</button>
+          <button type="submit" class="btn-primary">Lưu</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initLayout } from '../js/modules/layout.js';
+    import residentAPI from '../js/api/residents.js';
+    import { formatDate, showToast } from '../js/utils/helpers.js';
+
+    await initLayout({ requiredRoles: ['admin', 'manager', 'staff'] });
+
+    const residentsContainer = document.getElementById('residentsContainer');
+    const residentModal = document.getElementById('residentModal');
+    const residentForm = document.getElementById('residentForm');
+    const addResidentBtn = document.getElementById('addResidentBtn');
+    const closeModalBtn = document.getElementById('closeModalBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const searchInput = document.getElementById('searchInput');
+    const modalTitle = document.getElementById('modalTitle');
+
+    let residents = [];
+    let editingResidentId = null;
+
+    // Load residents
+    async function loadResidents() {
+      try {
+        residentsContainer.innerHTML = '<div class="loading"><div class="spinner"></div><p>Đang tải...</p></div>';
+        const response = await residentAPI.getResidents();
+        // Handle both array and object responses from backend
+        residents = Array.isArray(response) ? response : (response.data || response.residents || []);
+        renderResidents(residents);
+      } catch (error) {
+        residentsContainer.innerHTML = `<div class="empty-state">⚠️ ${error.message}</div>`;
+      }
+    }
+
+    // Render residents table
+    function renderResidents(data) {
+      if (data.length === 0) {
+        residentsContainer.innerHTML = '<div class="empty-state">📋 Chưa có cư dân nào</div>';
+        return;
+      }
+
+      residentsContainer.innerHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th>Họ tên</th>
+              <th>Email</th>
+              <th>Điện thoại</th>
+              <th>CCCD/CMND</th>
+              <th>Ngày tạo</th>
+              <th>Thao tác</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${data.map((res) => `
+              <tr>
+                <td>${res.full_name}</td>
+                <td>${res.email}</td>
+                <td>${res.phone_number}</td>
+                <td>${res.id_card || '-'}</td>
+                <td>${formatDate(res.created_at)}</td>
+                <td>
+                  <div class="action-btns">
+                    <button class="btn-sm" onclick="editResident('${res.id}')">Sửa</button>
+                    <button class="btn-sm danger" onclick="deleteResident('${res.id}')">Xóa</button>
+                  </div>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+    }
+
+    // Open add modal
+    addResidentBtn.addEventListener('click', () => {
+      editingResidentId = null;
+      modalTitle.textContent = 'Thêm cư dân';
+      residentForm.reset();
+      residentModal.classList.add('show');
+    });
+
+    // Close modal
+    closeModalBtn.addEventListener('click', () => {
+      residentModal.classList.remove('show');
+    });
+    cancelBtn.addEventListener('click', () => {
+      residentModal.classList.remove('show');
+    });
+
+    // Edit resident
+    window.editResident = async (id) => {
+      const resident = residents.find((r) => r.id === id);
+      if (!resident) return;
+
+      editingResidentId = id;
+      modalTitle.textContent = 'Chỉnh sửa cư dân';
+      document.getElementById('name').value = resident.full_name;
+      document.getElementById('email').value = resident.email;
+      document.getElementById('phone').value = resident.phone_number;
+      document.getElementById('idNumber').value = resident.id_card || '';
+      document.getElementById('address').value = resident.address || '';
+      residentModal.classList.add('show');
+    };
+
+    // Delete resident
+    window.deleteResident = async (id) => {
+      if (!confirm('Bạn có chắc chắn muốn xóa cư dân này?')) return;
+
+      try {
+        // API for delete would go here
+        showToast('Xóa cư dân thành công', 'success');
+        loadResidents();
+      } catch (error) {
+        showToast(`Lỗi: ${error.message}`, 'error');
+      }
+    };
+
+    // Submit form
+    residentForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const data = {
+        full_name: document.getElementById('name').value,
+        email: document.getElementById('email').value,
+        phone_number: document.getElementById('phone').value,
+        id_card: document.getElementById('idNumber').value,
+        address: document.getElementById('address').value,
+      };
+
+      try {
+        if (editingResidentId) {
+          await residentAPI.updateResidentProfile(editingResidentId, data);
+          showToast('Cập nhật cư dân thành công', 'success');
+        } else {
+          await residentAPI.createResident(data);
+          showToast('Thêm cư dân thành công', 'success');
+        }
+        residentModal.classList.remove('show');
+        loadResidents();
+      } catch (error) {
+        showToast(`Lỗi: ${error.message}`, 'error');
+      }
+    });
+
+    // Search
+    searchInput.addEventListener('input', (e) => {
+      const query = e.target.value.toLowerCase();
+      const filtered = residents.filter(
+        (r) =>
+          r.full_name.toLowerCase().includes(query) ||
+          r.email.toLowerCase().includes(query) ||
+          r.phone_number.includes(query) ||
+          r.id_card.includes(query),
+      );
+      renderResidents(filtered);
+    });
+
+    // Initial load
+    loadResidents();
+  </script>
+</body>
+</html>

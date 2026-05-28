@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Báo cáo Tài chính - Vinhomes</title>
+  <link rel="stylesheet" href="../css/admin.css" />
+</head>
+<body>
+  <div id="navbar-placeholder"></div>
+  <div class="container">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Báo cáo Tài chính</h1>
+        <p class="page-subtitle">UC 2.7.39 — Tổng hợp doanh thu & công nợ</p>
+      </div>
+    </div>
+
+    <div class="section" style="padding:20px">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Từ ngày</label>
+          <input type="date" id="startDate" />
+        </div>
+        <div class="form-group">
+          <label>Đến ngày</label>
+          <input type="date" id="endDate" />
+        </div>
+        <div class="form-group">
+          <label>Trạng thái HĐ</label>
+          <select id="statusFilter">
+            <option value="">Tất cả</option>
+            <option value="pending">Chờ thanh toán</option>
+            <option value="paid">Đã thanh toán</option>
+            <option value="overdue">Quá hạn</option>
+          </select>
+        </div>
+        <div class="form-group" style="display:flex;align-items:flex-end">
+          <button class="btn btn-primary" id="generateBtn">Tạo báo cáo</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="kpi-grid" id="reportKPI">
+      <div class="empty-state"><p>Chọn khoảng thời gian và nhấn "Tạo báo cáo"</p></div>
+    </div>
+
+    <div class="section" id="reportDetail" style="display:none">
+      <div class="section-title"><span>Chi tiết tổng hợp</span></div>
+      <div id="reportTable"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initLayout } from '../js/modules/layout.js';
+    import reportsAPI from '../js/api/reports.js';
+    import { formatCurrency, showToast } from '../js/utils/helpers.js';
+
+    await initLayout({ requiredRoles: ['admin', 'manager'] });
+
+    const today = new Date();
+    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+    document.getElementById('startDate').value = firstDay.toISOString().slice(0, 10);
+    document.getElementById('endDate').value = today.toISOString().slice(0, 10);
+
+    document.getElementById('generateBtn').addEventListener('click', async () => {
+      const start = document.getElementById('startDate').value;
+      const end = document.getElementById('endDate').value;
+      const status = document.getElementById('statusFilter').value;
+      if (!start || !end) {
+        showToast('Vui lòng chọn khoảng thời gian', 'error');
+        return;
+      }
+      try {
+        document.getElementById('generateBtn').disabled = true;
+        const res = await reportsAPI.getFinancialReport({
+          start_date: start,
+          end_date: end,
+          status: status || undefined,
+        });
+        const r = res.data || res;
+        document.getElementById('reportKPI').innerHTML = `
+          <div class="kpi-card blue">
+            <div class="kpi-label">Tổng hóa đơn</div>
+            <div class="kpi-value">${r.total_invoices || 0}</div>
+          </div>
+          <div class="kpi-card green">
+            <div class="kpi-label">Tổng phát hành</div>
+            <div class="kpi-value" style="font-size:18px">${formatCurrency(r.total_amount || 0)}</div>
+          </div>
+          <div class="kpi-card green">
+            <div class="kpi-label">Đã thu</div>
+            <div class="kpi-value" style="font-size:18px">${formatCurrency(r.total_paid || 0)}</div>
+          </div>
+          <div class="kpi-card orange">
+            <div class="kpi-label">Còn nợ</div>
+            <div class="kpi-value" style="font-size:18px">${formatCurrency(r.total_outstanding || 0)}</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Tỷ lệ thu</div>
+            <div class="kpi-value">${(r.collection_rate || 0).toFixed(1)}%</div>
+          </div>
+          <div class="kpi-card red">
+            <div class="kpi-label">Quá hạn</div>
+            <div class="kpi-value">${r.overdue_count || 0}</div>
+          </div>
+        `;
+
+        document.getElementById('reportDetail').style.display = 'block';
+        document.getElementById('reportTable').innerHTML = `<div class="table-responsive"><table>
+          <thead><tr><th>Chỉ tiêu</th><th>Giá trị</th></tr></thead>
+          <tbody>
+            <tr><td>Hóa đơn đã thanh toán</td><td>${r.paid_count || 0}</td></tr>
+            <tr><td>Hóa đơn chờ thanh toán</td><td>${r.pending_count || 0}</td></tr>
+            <tr><td>Hóa đơn quá hạn</td><td>${r.overdue_count || 0}</td></tr>
+            <tr><td>Tổng doanh thu phát hành</td><td>${formatCurrency(r.total_amount || 0)}</td></tr>
+            <tr><td>Tổng đã thu</td><td>${formatCurrency(r.total_paid || 0)}</td></tr>
+            <tr><td>Công nợ còn lại</td><td>${formatCurrency(r.total_outstanding || 0)}</td></tr>
+            <tr><td>Tỷ lệ thu hồi</td><td>${(r.collection_rate || 0).toFixed(2)}%</td></tr>
+          </tbody>
+        </table></div>`;
+      } catch (err) {
+        showToast(err.message, 'error');
+      } finally {
+        document.getElementById('generateBtn').disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

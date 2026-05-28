@@ -195,6 +195,41 @@
                 </div>
             </div>
 
+            <!-- 05. TRẠNG THÁI CĂN HỘ (GIS) -->
+            <div class="panel-section">
+                <div class="section-title"><span>|</span> 05 TRẠNG THÁI CĂN HỘ (GIS)</div>
+                <div class="gis-status-info">
+                    <span>Dữ liệu backend:</span>
+                    <strong id="gisStatusCount">Đang tải...</strong>
+                    <button id="btnRefreshStatus" class="btn-sm-gis">⟳ Làm mới dữ liệu</button>
+                </div>
+                <div class="layer-item">
+                    <span class="layer-label">Hiển thị lớp trạng thái</span>
+                    <label class="switch">
+                        <input type="checkbox" id="chkStatusOverlay" checked />
+                        <span class="switch-slider"></span>
+                    </label>
+                </div>
+                <div class="status-legend">
+                    <label class="checkbox-container"><input type="checkbox" data-status-filter="empty" checked /><span class="checkmark green"></span> Trống</label>
+                    <label class="checkbox-container"><input type="checkbox" data-status-filter="rented" checked /><span class="checkmark blue"></span> Đang thuê</label>
+                    <label class="checkbox-container"><input type="checkbox" data-status-filter="expiring" checked /><span class="checkmark yellow"></span> Sắp hết HĐ</label>
+                    <label class="checkbox-container"><input type="checkbox" data-status-filter="maintenance" checked /><span class="checkmark red"></span> Bảo trì</label>
+                </div>
+                <div class="tower-filter">
+                    <span class="offset-label">Tòa nhà:</span>
+                    <label class="checkbox-container"><input type="checkbox" id="filterTowerW1" checked /> W1</label>
+                    <label class="checkbox-container"><input type="checkbox" id="filterTowerW2" checked /> W2</label>
+                    <label class="checkbox-container"><input type="checkbox" id="filterTowerW3" checked /> W3</label>
+                </div>
+                <div class="floor-filter">
+                    <span class="offset-label">Tầng: <span id="filterFloorMinVal">1</span> – <span id="filterFloorMaxVal">40</span></span>
+                    <input type="range" id="filterFloorMin" min="1" max="39" value="1" />
+                    <input type="range" id="filterFloorMax" min="2" max="40" value="40" />
+                </div>
+                <a href="/pages/login.html" class="admin-link-gis">→ Cổng quản trị</a>
+            </div>
+
             <!-- 03. THÔNG TIN PHÂN KHU CHỌN -->
             <div class="panel-section">
                 <div class="section-title"><span>|</span> 03 THÔNG TIN PHÂN KHU CHỌN</div>
@@ -239,6 +274,7 @@
     <script src="./js/rooftop_amenities/amenities_manager.js?v=30"></script>
 
     <!-- Core Engine -->
-    <script src="./js/app.js?v=30"></script>
+    <script src="./js/app.js?v=31"></script>
+    <script src="./js/gis/status_overlay.js?v=31"></script>
 </body>
 </html>
