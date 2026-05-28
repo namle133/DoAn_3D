@@ -1,0 +1,1144 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quản lý Hợp đồng - Vinhomes Property Management</title>
+  <link rel="stylesheet" href="../css/admin.css" />
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f5f5f5;
+      color: #333;
+    }
+
+    .navbar {
+      background: white;
+      border-bottom: 1px solid #ddd;
+      padding: 15px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    .navbar-left {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .logo {
+      font-size: 20px;
+      font-weight: bold;
+      color: #667eea;
+      cursor: pointer;
+    }
+
+    .nav-menu {
+      display: flex;
+      gap: 30px;
+      list-style: none;
+    }
+
+    .nav-menu a {
+      color: #666;
+      text-decoration: none;
+      font-size: 14px;
+      transition: color 0.3s;
+      cursor: pointer;
+    }
+
+    .nav-menu a:hover,
+    .nav-menu a.active {
+      color: #667eea;
+      font-weight: 600;
+    }
+
+    .navbar-right {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .user-info {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      font-size: 13px;
+    }
+
+    .user-info .name {
+      font-weight: 600;
+      color: #333;
+    }
+
+    .user-info .role {
+      color: #999;
+      font-size: 12px;
+    }
+
+    .avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 16px;
+    }
+
+    .logout-btn {
+      background: #f44336;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: background 0.3s;
+    }
+
+    .logout-btn:hover {
+      background: #d32f2f;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+    }
+
+    .page-title {
+      font-size: 28px;
+      font-weight: bold;
+    }
+
+    .btn-primary {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.3s;
+    }
+
+    .btn-primary:hover {
+      background: #764ba2;
+    }
+
+    .filters {
+      display: flex;
+      gap: 15px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .filters input,
+    .filters select {
+      padding: 10px 15px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      font-size: 14px;
+    }
+
+    .filters input {
+      flex: 1;
+      min-width: 250px;
+    }
+
+    .filters select {
+      min-width: 150px;
+    }
+
+    .section {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    .table-responsive {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+
+    th {
+      background: #f9f9f9;
+      padding: 12px;
+      text-align: left;
+      font-size: 13px;
+      font-weight: 600;
+      color: #666;
+      border-bottom: 2px solid #eee;
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 12px;
+      border-bottom: 1px solid #eee;
+      font-size: 14px;
+    }
+
+    tr:hover {
+      background: #fafafa;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      text-align: center;
+      min-width: 80px;
+    }
+
+    .status-pending {
+      background: #fff3e0;
+      color: #f57c00;
+    }
+
+    .status-active {
+      background: #e8f5e9;
+      color: #2e7d32;
+    }
+
+    .status-extended {
+      background: #e3f2fd;
+      color: #1976d2;
+    }
+
+    .status-terminated {
+      background: #ffebee;
+      color: #c62828;
+    }
+
+    .action-btns {
+      display: flex;
+      gap: 5px;
+      flex-wrap: wrap;
+    }
+
+    .btn-sm {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: background 0.3s;
+      white-space: nowrap;
+    }
+
+    .btn-sm:hover {
+      background: #764ba2;
+    }
+
+    .btn-sm.info {
+      background: #2196F3;
+    }
+
+    .btn-sm.info:hover {
+      background: #0b7dda;
+    }
+
+    .btn-sm.success {
+      background: #4CAF50;
+    }
+
+    .btn-sm.success:hover {
+      background: #45a049;
+    }
+
+    .btn-sm.warning {
+      background: #ff9800;
+    }
+
+    .btn-sm.warning:hover {
+      background: #e68900;
+    }
+
+    .btn-sm.danger {
+      background: #f44336;
+    }
+
+    .btn-sm.danger:hover {
+      background: #d32f2f;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: #999;
+    }
+
+    .empty-state-icon {
+      font-size: 48px;
+      margin-bottom: 15px;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 40px 20px;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 2px solid #f3f3f3;
+      border-top: 2px solid #667eea;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    .spinner-small {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid #f3f3f3;
+      border-top: 2px solid #667eea;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-right: 5px;
+    }
+
+    @keyframes spin {
+      0% {
+        transform: rotate(0deg);
+      }
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      overflow-y: auto;
+    }
+
+    .modal.show {
+      display: flex;
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: 8px;
+      padding: 30px;
+      width: 90%;
+      max-width: 600px;
+      max-height: 90vh;
+      overflow-y: auto;
+      margin: auto;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .modal-header h2 {
+      font-size: 20px;
+    }
+
+    .close-btn {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: #999;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    .form-row .form-group {
+      margin-bottom: 0;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 500;
+      font-size: 14px;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      font-size: 14px;
+      font-family: inherit;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .form-group textarea {
+      resize: vertical;
+      min-height: 100px;
+    }
+
+    .form-group .error {
+      color: #f44336;
+      font-size: 12px;
+      margin-top: 5px;
+    }
+
+    .form-buttons {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 20px;
+    }
+
+    .btn-cancel {
+      background: #999;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    .btn-cancel:hover {
+      background: #777;
+    }
+
+    .detail-view {
+      background: #fafafa;
+      padding: 20px;
+      border-radius: 5px;
+    }
+
+    .detail-row {
+      display: grid;
+      grid-template-columns: 200px 1fr;
+      gap: 15px;
+      margin-bottom: 15px;
+    }
+
+    .detail-label {
+      font-weight: 600;
+      color: #666;
+    }
+
+    .detail-value {
+      color: #333;
+    }
+
+    .error-alert {
+      background: #ffebee;
+      color: #c62828;
+      padding: 15px;
+      border-radius: 5px;
+      margin-bottom: 20px;
+      display: none;
+    }
+
+    .error-alert.show {
+      display: block;
+    }
+
+    @media (max-width: 768px) {
+      .navbar {
+        flex-direction: column;
+        gap: 15px;
+      }
+
+      .nav-menu {
+        flex-direction: column;
+        gap: 10px;
+        width: 100%;
+        font-size: 12px;
+      }
+
+      .page-header {
+        flex-direction: column;
+        gap: 15px;
+        align-items: flex-start;
+      }
+
+      .filters {
+        flex-direction: column;
+      }
+
+      .filters input,
+      .filters select {
+        width: 100%;
+      }
+
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+
+      table {
+        font-size: 12px;
+      }
+
+      td,
+      th {
+        padding: 8px;
+      }
+
+      .action-btns {
+        flex-direction: column;
+      }
+
+      .btn-sm {
+        width: 100%;
+      }
+
+      .modal-content {
+        padding: 20px;
+      }
+
+      .detail-row {
+        grid-template-columns: 1fr;
+        gap: 5px;
+      }
+
+      .detail-label {
+        font-size: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="navbar-placeholder"></div>
+
+  <!-- Main Content -->
+  <div class="container">
+    <div class="error-alert" id="errorAlert"></div>
+
+    <div class="page-header">
+      <h1 class="page-title">Quản lý Hợp đồng</h1>
+      <button class="btn-primary" id="addContractBtn">+ Thêm hợp đồng</button>
+    </div>
+
+    <div class="filters">
+      <input type="text" id="searchInput" placeholder="Tìm kiếm theo số hợp đồng hoặc tên cư dân..." />
+      <select id="statusFilter">
+        <option value="">Tất cả trạng thái</option>
+        <option value="pending">Chờ duyệt</option>
+        <option value="active">Đang hoạt động</option>
+        <option value="extended">Gia hạn</option>
+        <option value="terminated">Kết thúc</option>
+      </select>
+    </div>
+
+    <div class="section">
+      <div class="table-responsive" id="contractsContainer">
+        <div class="loading">
+          <div class="spinner"></div>
+          <p>Đang tải dữ liệu...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add/Edit Contract Modal -->
+  <div class="modal" id="contractModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modalTitle">Thêm hợp đồng</h2>
+        <button class="close-btn" id="closeModalBtn">&times;</button>
+      </div>
+      <form id="contractForm">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="resident">Cư dân *</label>
+            <select id="resident" name="resident" required>
+              <option value="">-- Chọn cư dân --</option>
+            </select>
+            <div class="error" id="residentError"></div>
+          </div>
+          <div class="form-group">
+            <label for="apartment">Căn hộ *</label>
+            <select id="apartment" name="apartment" required>
+              <option value="">-- Chọn căn hộ --</option>
+            </select>
+            <div class="error" id="apartmentError"></div>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="startDate">Ngày bắt đầu *</label>
+            <input type="date" id="startDate" name="startDate" required />
+            <div class="error" id="startDateError"></div>
+          </div>
+          <div class="form-group">
+            <label for="endDate">Ngày kết thúc *</label>
+            <input type="date" id="endDate" name="endDate" required />
+            <div class="error" id="endDateError"></div>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="monthlyRent">Tiền thuê/tháng (VND) *</label>
+            <input type="number" id="monthlyRent" name="monthlyRent" min="0" required />
+            <div class="error" id="monthlyRentError"></div>
+          </div>
+          <div class="form-group">
+            <label for="depositAmount">Tiền cọc (VND) *</label>
+            <input type="number" id="depositAmount" name="depositAmount" min="0" required />
+            <div class="error" id="depositAmountError"></div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="terms">Điều khoản và điều kiện</label>
+          <textarea id="terms" name="terms" placeholder="Nhập các điều khoản và điều kiện của hợp đồng..."></textarea>
+        </div>
+
+        <div class="form-buttons">
+          <button type="button" class="btn-cancel" id="cancelBtn">Hủy</button>
+          <button type="submit" class="btn-primary">Lưu</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- View Contract Detail Modal -->
+  <div class="modal" id="viewModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Chi tiết hợp đồng</h2>
+        <button class="close-btn" id="closeViewBtn">&times;</button>
+      </div>
+      <div id="viewContent"></div>
+      <div class="form-buttons">
+        <button type="button" class="btn-cancel" id="closeViewBtnBottom">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Action Modal (Approve/Extend/Terminate) -->
+  <div class="modal" id="actionModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="actionTitle">Xử lý hợp đồng</h2>
+        <button class="close-btn" id="closeActionBtn">&times;</button>
+      </div>
+      <form id="actionForm">
+        <div class="form-group" id="actionFormContent">
+          <!-- Content will be injected based on action type -->
+        </div>
+        <div class="form-buttons">
+          <button type="button" class="btn-cancel" id="cancelActionBtn">Hủy</button>
+          <button type="submit" class="btn-primary" id="submitActionBtn">Xác nhận</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initLayout } from '../js/modules/layout.js';
+    import contractAPI from '../js/api/contracts.js';
+    import buildingAPI from '../js/api/buildings.js';
+    import residentAPI from '../js/api/residents.js';
+    import { formatDate, formatCurrency, showToast } from '../js/utils/helpers.js';
+
+    await initLayout({ requiredRoles: ['admin', 'manager', 'staff'] });
+
+    // DOM Elements
+    const contractsContainer = document.getElementById('contractsContainer');
+    const contractModal = document.getElementById('contractModal');
+    const contractForm = document.getElementById('contractForm');
+    const viewModal = document.getElementById('viewModal');
+    const actionModal = document.getElementById('actionModal');
+    const addContractBtn = document.getElementById('addContractBtn');
+    const closeModalBtn = document.getElementById('closeModalBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const searchInput = document.getElementById('searchInput');
+    const statusFilter = document.getElementById('statusFilter');
+    const modalTitle = document.getElementById('modalTitle');
+    const residentSelect = document.getElementById('resident');
+    const apartmentSelect = document.getElementById('apartment');
+
+    // State
+    let contracts = [];
+    let residents = [];
+    let apartments = [];
+    let editingContractId = null;
+    let currentActionType = null;
+    let currentActionContractId = null;
+
+    // Load initial data
+    async function loadInitialData() {
+      try {
+        const [contractsRes, residentsRes, apartmentsRes] = await Promise.all([
+          contractAPI.getContracts(),
+          residentAPI.getResidents(),
+          buildingAPI.getApartments(),
+        ]);
+
+        contracts = Array.isArray(contractsRes) ? contractsRes : (contractsRes.data || contractsRes.contracts || []);
+        residents = Array.isArray(residentsRes) ? residentsRes : (residentsRes.data || residentsRes.residents || []);
+        apartments = Array.isArray(apartmentsRes) ? apartmentsRes : (apartmentsRes.data || apartmentsRes.apartments || []);
+
+        populateSelects();
+        renderContracts(contracts);
+      } catch (error) {
+        console.error('Error loading data:', error);
+        showToast(`Lỗi tải dữ liệu: ${error.message}`, 'error');
+      }
+    }
+
+    // Populate resident and apartment selects
+    function populateSelects() {
+      // Populate resident select
+      residentSelect.innerHTML = '<option value="">-- Chọn cư dân --</option>';
+      residents.forEach((resident) => {
+        const option = document.createElement('option');
+        option.value = resident.id;
+        option.textContent = resident.full_name || resident.name || 'Unknown';
+        residentSelect.appendChild(option);
+      });
+
+      // Populate apartment select
+      apartmentSelect.innerHTML = '<option value="">-- Chọn căn hộ --</option>';
+      apartments.forEach((apartment) => {
+        const option = document.createElement('option');
+        option.value = apartment.id;
+        option.textContent = apartment.number || apartment.id;
+        apartmentSelect.appendChild(option);
+      });
+    }
+
+    // Render contracts table
+    function renderContracts(data) {
+      if (data.length === 0) {
+        contractsContainer.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📄</div><p>Chưa có hợp đồng nào</p></div>';
+        return;
+      }
+
+      const tableHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th>Số hợp đồng</th>
+              <th>Cư dân</th>
+              <th>Căn hộ</th>
+              <th>Ngày bắt đầu</th>
+              <th>Ngày kết thúc</th>
+              <th>Tiền thuê</th>
+              <th>Trạng thái</th>
+              <th>Thao tác</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${data.map((contract) => `
+              <tr>
+                <td>${contract.number || contract.id}</td>
+                <td>${contract.resident_name || '-'}</td>
+                <td>${contract.apartment_number || '-'}</td>
+                <td>${formatDate(contract.start_date)}</td>
+                <td>${formatDate(contract.end_date)}</td>
+                <td>${formatCurrency(contract.monthly_rent || 0)}</td>
+                <td><span class="status-badge status-${contract.status || 'pending'}">${getStatusLabel(contract.status)}</span></td>
+                <td>
+                  <div class="action-btns">
+                    <button class="btn-sm info" onclick="viewContract('${contract.id}')">Xem</button>
+                    ${contract.status === 'pending' ? `<button class="btn-sm success" onclick="approveContract('${contract.id}')">Duyệt</button>` : ''}
+                    ${contract.status === 'active' ? `<button class="btn-sm warning" onclick="extendContract('${contract.id}')">Gia hạn</button>` : ''}
+                    ${contract.status !== 'terminated' ? `<button class="btn-sm danger" onclick="terminateContract('${contract.id}')">Kết thúc</button>` : ''}
+                  </div>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+      contractsContainer.innerHTML = tableHTML;
+    }
+
+    // Get status label
+    function getStatusLabel(status) {
+      const labels = {
+        pending: 'Chờ duyệt',
+        active: 'Đang hoạt động',
+        extended: 'Gia hạn',
+        terminated: 'Kết thúc',
+      };
+      return labels[status] || status;
+    }
+
+    // Clear form errors
+    function clearFormErrors() {
+      document.querySelectorAll('.error').forEach((el) => {
+        el.textContent = '';
+      });
+    }
+
+    // Validate form
+    function validateForm() {
+      clearFormErrors();
+      let isValid = true;
+
+      const resident = document.getElementById('resident').value;
+      const apartment = document.getElementById('apartment').value;
+      const startDate = new Date(document.getElementById('startDate').value);
+      const endDate = new Date(document.getElementById('endDate').value);
+      const monthlyRent = parseFloat(document.getElementById('monthlyRent').value);
+      const depositAmount = parseFloat(document.getElementById('depositAmount').value);
+
+      if (!resident) {
+        document.getElementById('residentError').textContent = 'Vui lòng chọn cư dân';
+        isValid = false;
+      }
+
+      if (!apartment) {
+        document.getElementById('apartmentError').textContent = 'Vui lòng chọn căn hộ';
+        isValid = false;
+      }
+
+      if (!startDate || isNaN(startDate.getTime())) {
+        document.getElementById('startDateError').textContent = 'Vui lòng chọn ngày bắt đầu';
+        isValid = false;
+      }
+
+      if (!endDate || isNaN(endDate.getTime())) {
+        document.getElementById('endDateError').textContent = 'Vui lòng chọn ngày kết thúc';
+        isValid = false;
+      }
+
+      if (startDate >= endDate) {
+        document.getElementById('endDateError').textContent = 'Ngày kết thúc phải sau ngày bắt đầu';
+        isValid = false;
+      }
+
+      if (isNaN(monthlyRent) || monthlyRent <= 0) {
+        document.getElementById('monthlyRentError').textContent = 'Vui lòng nhập tiền thuê hợp lệ';
+        isValid = false;
+      }
+
+      if (isNaN(depositAmount) || depositAmount < 0) {
+        document.getElementById('depositAmountError').textContent = 'Vui lòng nhập tiền cọc hợp lệ';
+        isValid = false;
+      }
+
+      return isValid;
+    }
+
+    // Open add modal
+    addContractBtn.addEventListener('click', () => {
+      editingContractId = null;
+      modalTitle.textContent = 'Thêm hợp đồng';
+      contractForm.reset();
+      clearFormErrors();
+      contractModal.classList.add('show');
+    });
+
+    // Close modals
+    closeModalBtn.addEventListener('click', () => {
+      contractModal.classList.remove('show');
+    });
+    cancelBtn.addEventListener('click', () => {
+      contractModal.classList.remove('show');
+    });
+
+    // Close view modal
+    document.getElementById('closeViewBtn').addEventListener('click', () => {
+      viewModal.classList.remove('show');
+    });
+    document.getElementById('closeViewBtnBottom').addEventListener('click', () => {
+      viewModal.classList.remove('show');
+    });
+
+    // Close action modal
+    document.getElementById('closeActionBtn').addEventListener('click', () => {
+      actionModal.classList.remove('show');
+    });
+    document.getElementById('cancelActionBtn').addEventListener('click', () => {
+      actionModal.classList.remove('show');
+    });
+
+    // View contract
+    window.viewContract = async (id) => {
+      try {
+        const response = await contractAPI.getContractByID(id);
+        const contract = response.data;
+
+        const resident = residents.find((r) => r.id === contract.resident_id);
+        const apartment = apartments.find((a) => a.id === contract.apartment_id);
+
+        const viewContent = document.getElementById('viewContent');
+        viewContent.innerHTML = `
+          <div class="detail-view">
+            <div class="detail-row">
+              <div class="detail-label">Số hợp đồng:</div>
+              <div class="detail-value">${contract.number || contract.id}</div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Cư dân:</div>
+              <div class="detail-value">${resident?.name || contract.resident_name || '-'}</div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Căn hộ:</div>
+              <div class="detail-value">${apartment?.number || contract.apartment_number || '-'}</div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Ngày bắt đầu:</div>
+              <div class="detail-value">${formatDate(contract.start_date)}</div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Ngày kết thúc:</div>
+              <div class="detail-value">${formatDate(contract.end_date)}</div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Tiền thuê/tháng:</div>
+              <div class="detail-value">${formatCurrency(contract.monthly_rent || 0)}</div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Tiền cọc:</div>
+              <div class="detail-value">${formatCurrency(contract.deposit_amount || 0)}</div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Trạng thái:</div>
+              <div class="detail-value"><span class="status-badge status-${contract.status || 'pending'}">${getStatusLabel(contract.status)}</span></div>
+            </div>
+            ${contract.terms ? `
+            <div class="detail-row">
+              <div class="detail-label">Điều khoản:</div>
+              <div class="detail-value">${contract.terms.replace(/\n/g, '<br>')}</div>
+            </div>
+            ` : ''}
+            <div class="detail-row">
+              <div class="detail-label">Ngày tạo:</div>
+              <div class="detail-value">${formatDate(contract.created_at, 'dd/mm/yyyy hh:mm')}</div>
+            </div>
+          </div>
+        `;
+        viewModal.classList.add('show');
+      } catch (error) {
+        showToast(`Lỗi: ${error.message}`, 'error');
+      }
+    };
+
+    // Approve contract
+    window.approveContract = async (id) => {
+      currentActionType = 'approve';
+      currentActionContractId = id;
+      document.getElementById('actionTitle').textContent = 'Duyệt hợp đồng';
+      document.getElementById('actionFormContent').innerHTML = '<p>Xác nhận duyệt hợp đồng này?</p>';
+      document.getElementById('submitActionBtn').textContent = 'Duyệt';
+      actionModal.classList.add('show');
+    };
+
+    // Extend contract
+    window.extendContract = async (id) => {
+      currentActionType = 'extend';
+      currentActionContractId = id;
+      document.getElementById('actionTitle').textContent = 'Gia hạn hợp đồng';
+      document.getElementById('actionFormContent').innerHTML = `
+        <div class="form-group">
+          <label for="extendEndDate">Ngày kết thúc mới *</label>
+          <input type="date" id="extendEndDate" required />
+        </div>
+        <div class="form-group">
+          <label for="extendNotes">Ghi chú</label>
+          <textarea id="extendNotes" placeholder="Nhập ghi chú..."></textarea>
+        </div>
+      `;
+      document.getElementById('submitActionBtn').textContent = 'Gia hạn';
+      actionModal.classList.add('show');
+    };
+
+    // Terminate contract
+    window.terminateContract = async (id) => {
+      currentActionType = 'terminate';
+      currentActionContractId = id;
+      document.getElementById('actionTitle').textContent = 'Kết thúc hợp đồng';
+      document.getElementById('actionFormContent').innerHTML = `
+        <div class="form-group">
+          <label for="terminateReason">Lý do *</label>
+          <textarea id="terminateReason" required placeholder="Nhập lý do kết thúc..."></textarea>
+        </div>
+        <div class="form-group">
+          <label for="terminateDate">Ngày kết thúc *</label>
+          <input type="date" id="terminateDate" required />
+        </div>
+      `;
+      document.getElementById('submitActionBtn').textContent = 'Kết thúc';
+      actionModal.classList.add('show');
+    };
+
+    // Submit form
+    contractForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      if (!validateForm()) {
+        return;
+      }
+
+      const data = {
+        resident_id: document.getElementById('resident').value,
+        apartment_id: document.getElementById('apartment').value,
+        start_date: new Date(document.getElementById('startDate').value + 'T00:00:00').toISOString(),
+        end_date: new Date(document.getElementById('endDate').value + 'T00:00:00').toISOString(),
+        monthly_rent: parseFloat(document.getElementById('monthlyRent').value),
+        deposit_amount: parseFloat(document.getElementById('depositAmount').value),
+        terms: document.getElementById('terms').value,
+      };
+
+      try {
+        if (editingContractId) {
+          await contractAPI.updateContract(editingContractId, data);
+          showToast('Cập nhật hợp đồng thành công', 'success');
+        } else {
+          await contractAPI.createContract(data);
+          showToast('Tạo hợp đồng thành công', 'success');
+        }
+        contractModal.classList.remove('show');
+        loadInitialData();
+      } catch (error) {
+        showToast(`Lỗi: ${error.message}`, 'error');
+      }
+    });
+
+    // Submit action form
+    document.getElementById('actionForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      try {
+        if (currentActionType === 'approve') {
+          await contractAPI.approveContract(currentActionContractId);
+          showToast('Duyệt hợp đồng thành công', 'success');
+        } else if (currentActionType === 'extend') {
+          const newEndDate = document.getElementById('extendEndDate').value;
+          const notes = document.getElementById('extendNotes').value;
+
+          if (!newEndDate) {
+            showToast('Vui lòng chọn ngày kết thúc mới', 'error');
+            return;
+          }
+
+          await contractAPI.extendContract(currentActionContractId, {
+            new_end_date: new Date(newEndDate + 'T00:00:00').toISOString(),
+            notes: notes,
+          });
+          showToast('Gia hạn hợp đồng thành công', 'success');
+        } else if (currentActionType === 'terminate') {
+          const reason = document.getElementById('terminateReason').value;
+          const date = document.getElementById('terminateDate').value;
+
+          if (!reason || !date) {
+            showToast('Vui lòng điền đầy đủ thông tin', 'error');
+            return;
+          }
+
+          await contractAPI.terminateContract(currentActionContractId, {
+            reason: reason,
+            termination_date: new Date(date + 'T00:00:00').toISOString(),
+          });
+          showToast('Kết thúc hợp đồng thành công', 'success');
+        }
+
+        actionModal.classList.remove('show');
+        loadInitialData();
+      } catch (error) {
+        showToast(`Lỗi: ${error.message}`, 'error');
+      }
+    });
+
+    // Search and filter
+    function filterContracts() {
+      const query = searchInput.value.toLowerCase();
+      const status = statusFilter.value;
+
+      let filtered = contracts.filter((contract) => {
+        const matchesSearch =
+          (contract.number || '').toLowerCase().includes(query) ||
+          (contract.resident_name || '').toLowerCase().includes(query);
+        const matchesStatus = !status || contract.status === status;
+        return matchesSearch && matchesStatus;
+      });
+
+      renderContracts(filtered);
+    }
+
+    searchInput.addEventListener('input', filterContracts);
+    statusFilter.addEventListener('change', filterContracts);
+
+    // Close modal when clicking outside
+    contractModal.addEventListener('click', (e) => {
+      if (e.target === contractModal) {
+        contractModal.classList.remove('show');
+      }
+    });
+
+    viewModal.addEventListener('click', (e) => {
+      if (e.target === viewModal) {
+        viewModal.classList.remove('show');
+      }
+    });
+
+    actionModal.addEventListener('click', (e) => {
+      if (e.target === actionModal) {
+        actionModal.classList.remove('show');
+      }
+    });
+
+    // Initial load
+    loadInitialData();
+  </script>
+</body>
+</html>
