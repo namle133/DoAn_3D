@@ -637,6 +637,11 @@
             <div class="error" id="monthlyRentError"></div>
           </div>
           <div class="form-group">
+            <label for="paymentPeriod">Kỳ thanh toán (tháng) *</label>
+            <input type="number" id="paymentPeriod" name="paymentPeriod" min="1" value="1" required />
+            <div class="error" id="paymentPeriodError"></div>
+          </div>
+          <div class="form-group">
             <label for="depositAmount">Tiền cọc (VND) *</label>
             <input type="number" id="depositAmount" name="depositAmount" min="0" required />
             <div class="error" id="depositAmountError"></div>
@@ -838,6 +843,7 @@
       const startDate = new Date(document.getElementById('startDate').value);
       const endDate = new Date(document.getElementById('endDate').value);
       const monthlyRent = parseFloat(document.getElementById('monthlyRent').value);
+      const paymentPeriod = parseInt(document.getElementById('paymentPeriod').value);
       const depositAmount = parseFloat(document.getElementById('depositAmount').value);
 
       if (!resident) {
@@ -867,6 +873,11 @@
 
       if (isNaN(monthlyRent) || monthlyRent <= 0) {
         document.getElementById('monthlyRentError').textContent = 'Vui lòng nhập tiền thuê hợp lệ';
+        isValid = false;
+      }
+
+      if (isNaN(paymentPeriod) || paymentPeriod < 1) {
+        document.getElementById('paymentPeriodError').textContent = 'Kỳ thanh toán phải ≥ 1 tháng';
         isValid = false;
       }
 
@@ -1035,7 +1046,8 @@
         start_date: new Date(document.getElementById('startDate').value + 'T00:00:00').toISOString(),
         end_date: new Date(document.getElementById('endDate').value + 'T00:00:00').toISOString(),
         monthly_rent: parseFloat(document.getElementById('monthlyRent').value),
-        deposit_amount: parseFloat(document.getElementById('depositAmount').value),
+        payment_period: parseInt(document.getElementById('paymentPeriod').value),
+        deposit: parseFloat(document.getElementById('depositAmount').value),
         terms: document.getElementById('terms').value,
       };
 
