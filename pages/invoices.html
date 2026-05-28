@@ -1101,6 +1101,7 @@
       document.getElementById('overdueAmount').textContent = formatCurrency(overdueAmount);
       document.getElementById('paidAmount').textContent = formatCurrency(paidAmount);
       document.getElementById('totalInvoices').textContent = allInvoices.length;
+      window.dispatchEvent(new CustomEvent('kpiNeedsRefresh'));
     }
 
     function openAddInvoiceModal() {

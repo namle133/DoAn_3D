@@ -1074,6 +1074,7 @@
         if (currentActionType === 'approve') {
           await contractAPI.approveContract(currentActionContractId, { approved: true });
           showToast('Duyệt hợp đồng thành công', 'success');
+          window.dispatchEvent(new CustomEvent('kpiNeedsRefresh'));
         } else if (currentActionType === 'extend') {
           const newEndDate = document.getElementById('extendEndDate').value;
           const notes = document.getElementById('extendNotes').value;
@@ -1088,6 +1089,7 @@
             notes: notes,
           });
           showToast('Gia hạn hợp đồng thành công', 'success');
+          window.dispatchEvent(new CustomEvent('kpiNeedsRefresh'));
         } else if (currentActionType === 'terminate') {
           const reason = document.getElementById('terminateReason').value;
           const date = document.getElementById('terminateDate').value;
@@ -1102,6 +1104,7 @@
             termination_date: new Date(date + 'T00:00:00').toISOString(),
           });
           showToast('Kết thúc hợp đồng thành công', 'success');
+          window.dispatchEvent(new CustomEvent('kpiNeedsRefresh'));
         }
 
         actionModal.classList.remove('show');

@@ -207,6 +207,14 @@
     loadMaintenance();
     loadExpiringContracts();
     setInterval(() => { loadKPIs(); loadOverdueInvoices(); loadMaintenance(); }, 30000);
+
+    // Listen for KPI refresh events from other pages
+    window.addEventListener('kpiNeedsRefresh', async () => {
+      loadKPIs();
+      loadOverdueInvoices();
+      loadMaintenance();
+      loadExpiringContracts();
+    });
   </script>
 </body>
 </html>

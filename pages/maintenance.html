@@ -1223,6 +1223,7 @@
       document.getElementById('inProgressCount').textContent = inProgressCount;
       document.getElementById('completedCount').textContent = completedCount;
       document.getElementById('urgentCount').textContent = urgentCount;
+      window.dispatchEvent(new CustomEvent('kpiNeedsRefresh'));
     }
 
     function openCreateModal() {
