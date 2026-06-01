@@ -3,7 +3,6 @@ package handlers
 import (
 	"crypto/rand"
 	"encoding/hex"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -114,18 +113,6 @@ func Register(c *gin.Context) {
 		return
 	}
 
-	// Debug: log received data
-	fmt.Printf("[DEBUG] Received registration request:\n")
-	fmt.Printf("  Username: %q\n", req.Username)
-	fmt.Printf("  Email: %q\n", req.Email)
-	fmt.Printf("  Role: %q\n", req.Role)
-	fmt.Printf("  FullName: %q\n", req.FullName)
-	fmt.Printf("  IDCard: %q\n", req.IDCard)
-	fmt.Printf("  DateOfBirth: %q\n", req.DateOfBirth)
-	fmt.Printf("  Gender: %q\n", req.Gender)
-	fmt.Printf("  PhoneNumber: %q\n", req.PhoneNumber)
-	fmt.Printf("  PermanentAddress: %q\n", req.PermanentAddress)
-
 	// For resident role, validate required fields
 	if req.Role == "resident" {
 		if req.FullName == "" {
@@ -148,8 +135,8 @@ func Register(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Giới tính là bắt buộc"})
 			return
 		}
-		if req.Gender != "M" && req.Gender != "F" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Giới tính phải là M hoặc F"})
+		if req.Gender != "M" && req.Gender != "F" && req.Gender != "O" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Giới tính không hợp lệ"})
 			return
 		}
 		if req.PhoneNumber == "" {
@@ -204,17 +191,18 @@ func Register(c *gin.Context) {
 		return
 	}
 
-	// Create role-specific record
-	createRoleRecord(user.ID, req.Role)
-
-	// If resident role, create Resident record
+	// Cư dân: tạo 1 bản ghi Resident đầy đủ (không gọi createRoleRecord — tránh bản ghi rỗng trùng user_id)
 	if req.Role == "resident" {
 		dateOfBirth, err := time.Parse("2006-01-02", req.DateOfBirth)
 		if err != nil {
-			// Rollback user creation
 			database.DB.Delete(&user)
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Định dạng ngày sinh không hợp lệ (YYYY-MM-DD)"})
 			return
+		}
+
+		gender := req.Gender
+		if gender == "O" {
+			gender = "M" // DB chỉ lưu M/F; form có thêm "Khác"
 		}
 
 		resident := models.Resident{
@@ -223,19 +211,19 @@ func Register(c *gin.Context) {
 			FullName:         req.FullName,
 			IDCard:           req.IDCard,
 			DateOfBirth:      dateOfBirth,
-			Gender:           req.Gender,
+			Gender:           gender,
 			PhoneNumber:      req.PhoneNumber,
 			Email:            req.Email,
 			PermanentAddress: req.PermanentAddress,
 		}
 
 		if err := database.DB.Create(&resident).Error; err != nil {
-			// Rollback user and role record
 			database.DB.Delete(&user)
-			database.DB.Where("user_id = ?", user.ID).Delete(&models.Resident{})
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Không thể tạo hồ sơ cư dân"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Không thể tạo hồ sơ cư dân: " + err.Error()})
 			return
 		}
+	} else {
+		createRoleRecord(user.ID, req.Role)
 	}
 
 	c.JSON(http.StatusCreated, gin.H{

@@ -35,15 +35,16 @@ type Config struct {
 }
 
 func LoadConfig() *Config {
-	godotenv.Load()
+	loadEnvFiles()
 
 	jwtExpiry, _ := strconv.Atoi(getEnv("JWT_EXPIRY_HOURS", "24"))
 
 	return &Config{
-		DBHost:         getEnv("DB_HOST", "localhost"),
-		DBPort:         getEnv("DB_PORT", "5432"),
-		DBUser:         getEnv("DB_USER", "postgres"),
-		DBPassword:     getEnv("DB_PASSWORD", "postgres"),
+		// Mặc định: PostgreSQL trong Docker (docker-compose port 5433)
+		DBHost:         getEnv("DB_HOST", "127.0.0.1"),
+		DBPort:         getEnv("DB_PORT", "5433"),
+		DBUser:         getEnv("DB_USER", "vinhomes_user"),
+		DBPassword:     getEnv("DB_PASSWORD", "vinhomes_pass"),
 		DBName:         getEnv("DB_NAME", "vinhomes_db"),
 		ServerPort:     getEnv("SERVER_PORT", "8080"),
 		GinMode:        getEnv("GIN_MODE", "debug"),
@@ -57,9 +58,24 @@ func LoadConfig() *Config {
 	}
 }
 
+// loadEnvFiles ưu tiên config/.env rồi .env ở thư mục backend.
+func loadEnvFiles() {
+	for _, path := range []string{"config/.env", ".env"} {
+		if err := godotenv.Load(path); err == nil {
+			return
+		}
+	}
+	_ = godotenv.Load()
+}
+
 func (c *Config) GetDSN() string {
+	host := c.DBHost
+	if host == "localhost" {
+		// Tránh kết nối IPv6 [::1] trùng instance Postgres khác trên máy
+		host = "127.0.0.1"
+	}
 	return fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		c.DBHost, c.DBPort, c.DBUser, c.DBPassword, c.DBName)
+		host, c.DBPort, c.DBUser, c.DBPassword, c.DBName)
 }
 
 func getEnv(key, defaultValue string) string {

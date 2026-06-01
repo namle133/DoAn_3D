@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/uit/vinhomes-management/internal/database"
 	"github.com/uit/vinhomes-management/internal/models"
+	"github.com/uit/vinhomes-management/internal/services"
 )
 
 type CreateContractRequest struct {
@@ -83,12 +84,41 @@ func GetContracts(c *gin.Context) {
 		query = query.Where("resident_id = ?", residentID)
 	}
 
+	// Cư dân chỉ xem HĐ của chính mình
+	if role, ok := c.Get("role"); ok && role.(string) == "resident" {
+		userID, _ := c.Get("user_id")
+		var resident models.Resident
+		if err := database.DB.Where("user_id = ?", userID).First(&resident).Error; err != nil {
+			c.JSON(http.StatusOK, []models.Contract{})
+			return
+		}
+		query = query.Where("resident_id = ?", resident.ID)
+	}
+
 	if err := query.Preload("Apartment").Preload("Resident").Find(&contracts).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch contracts"})
 		return
 	}
 
-	c.JSON(http.StatusOK, contracts)
+	type contractListItem struct {
+		models.Contract
+		ResidentName  string `json:"resident_name"`
+		ApartmentCode string `json:"apartment_code"`
+	}
+
+	items := make([]contractListItem, 0, len(contracts))
+	for _, ct := range contracts {
+		item := contractListItem{Contract: ct}
+		if ct.Resident.ID != "" {
+			item.ResidentName = ct.Resident.FullName
+		}
+		if ct.Apartment.ID != "" {
+			item.ApartmentCode = ct.Apartment.ApartmentCode
+		}
+		items = append(items, item)
+	}
+
+	c.JSON(http.StatusOK, items)
 }
 
 func GetContractByID(c *gin.Context) {
@@ -99,6 +129,20 @@ func GetContractByID(c *gin.Context) {
 		First(&contract, "id = ?", id).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Contract not found"})
 		return
+	}
+
+	// Cư dân chỉ xem HĐ của mình
+	if role, ok := c.Get("role"); ok && role.(string) == "resident" {
+		userID, _ := c.Get("user_id")
+		var resident models.Resident
+		if err := database.DB.Where("user_id = ?", userID).First(&resident).Error; err != nil {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Không có quyền truy cập"})
+			return
+		}
+		if contract.ResidentID != resident.ID {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Không có quyền xem hợp đồng này"})
+			return
+		}
 	}
 
 	c.JSON(http.StatusOK, contract)
@@ -148,6 +192,18 @@ func ApproveContract(c *gin.Context) {
 	if err := database.DB.Save(&contract).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to approve contract"})
 		return
+	}
+
+	// Tạo hóa đơn tháng đầu khi duyệt HĐ thành công
+	if req.Approved {
+		invoiceService := services.NewInvoiceService()
+		if err := invoiceService.CreateInvoiceForContractIfNotExists(&contract); err != nil {
+			c.JSON(http.StatusOK, gin.H{
+				"message":  "Hợp đồng đã duyệt nhưng không tạo được hóa đơn: " + err.Error(),
+				"contract": contract,
+			})
+			return
+		}
 	}
 
 	c.JSON(http.StatusOK, contract)

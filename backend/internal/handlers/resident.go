@@ -96,12 +96,16 @@ func CreateResident(c *gin.Context) {
 func GetResidents(c *gin.Context) {
 	var residents []models.Resident
 
-	if err := database.DB.Preload("Contracts").Find(&residents).Error; err != nil {
+	if err := database.DB.
+		Where("full_name IS NOT NULL AND full_name != ''").
+		Preload("Contracts").
+		Order("created_at DESC").
+		Find(&residents).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch residents"})
 		return
 	}
 
-	c.JSON(http.StatusOK, residents)
+	c.JSON(http.StatusOK, gin.H{"data": residents})
 }
 
 func GetResidentByID(c *gin.Context) {

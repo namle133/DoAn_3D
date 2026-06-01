@@ -15,6 +15,41 @@ func NewInvoiceService() *InvoiceService {
 	return &InvoiceService{}
 }
 
+// CreateInvoiceForContractIfNotExists tạo hóa đơn tháng đầu khi duyệt HĐ (nếu chưa có)
+func (s *InvoiceService) CreateInvoiceForContractIfNotExists(contract *models.Contract) error {
+	billingPeriod := time.Now().Format("2006-01")
+
+	var existing models.Invoice
+	if err := database.DB.Where("contract_id = ? AND billing_period = ?", contract.ID, billingPeriod).
+		First(&existing).Error; err == nil {
+		return nil // đã có hóa đơn kỳ này
+	}
+
+	dueDate := time.Now().AddDate(0, 0, 15) // hạn TT sau 15 ngày
+	if contract.StartDate.After(time.Now()) {
+		dueDate = contract.StartDate.AddDate(0, 0, 15)
+	}
+
+	invoice := models.Invoice{
+		ID:            uuid.New().String(),
+		ContractID:    contract.ID,
+		ApartmentID:   contract.ApartmentID,
+		InvoiceCode:   fmt.Sprintf("INV-%s-%s", billingPeriod, uuid.New().String()[:8]),
+		BillingPeriod: billingPeriod,
+		DueDate:       dueDate,
+		TotalAmount:   contract.MonthlyRent,
+		PaidAmount:    0,
+		Status:        "pending",
+	}
+
+	if err := database.DB.Create(&invoice).Error; err != nil {
+		return err
+	}
+
+	NewNotificationService().NotifyContractBilling(&invoice, contract)
+	return nil
+}
+
 // GenerateMonthlyInvoices creates invoices for all active contracts
 func (s *InvoiceService) GenerateMonthlyInvoices(billingPeriod string) error {
 	var contracts []models.Contract

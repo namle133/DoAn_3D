@@ -121,17 +121,20 @@ func (s *NotificationService) NotifyMaintenanceRequestCreated(request *models.Ma
 	return nil
 }
 
-// NotifyMaintenanceAssigned sends notification to assigned staff
+// NotifyMaintenanceAssigned sends notification to assigned staff (AssignedTo = user id)
 func (s *NotificationService) NotifyMaintenanceAssigned(request *models.MaintenanceRequest) error {
-	var staff models.Staff
-
-	if err := database.DB.Where("id = ?", request.AssignedTo).First(&staff).Error; err != nil {
+	if request.AssignedTo == nil || *request.AssignedTo == "" {
+		return nil
+	}
+	var user models.User
+	if err := database.DB.Where("id = ? AND role IN ?", *request.AssignedTo, []string{"staff", "manager", "admin"}).
+		First(&user).Error; err != nil {
 		return err
 	}
 
 	notification := models.Notification{
 		ID:        uuid.New().String(),
-		UserID:    staff.UserID,
+		UserID:    user.ID,
 		Title:     "Maintenance Request Assigned",
 		Message:   fmt.Sprintf("Maintenance request for apartment %s has been assigned to you. Issue: %s", request.ApartmentID, request.IssueType),
 		Type:      "maintenance_assigned",

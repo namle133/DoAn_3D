@@ -108,7 +108,8 @@ func main() {
 		protected.POST("/invoices", middleware.RequireRole("admin", "manager"), handlers.CreateInvoice)
 		protected.GET("/invoices", handlers.GetInvoices)
 		protected.GET("/invoices/:id", handlers.GetInvoiceByID)
-		protected.POST("/invoices/:id/payments", middleware.RequireRole("staff", "manager"), handlers.RecordPayment)
+		protected.PUT("/invoices/:id", middleware.RequireRole("admin", "manager"), handlers.UpdateInvoice)
+		protected.POST("/invoices/:id/payments", middleware.RequireRole("staff", "manager", "admin"), handlers.RecordPayment)
 		protected.GET("/invoices/overdue", handlers.GetOverdueInvoices)
 		protected.POST("/reports/financial", handlers.GetFinancialReport)
 

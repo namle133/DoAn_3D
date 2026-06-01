@@ -1,34 +1,35 @@
 #!/bin/bash
 
-# Start backend development server
+# Start backend development server (DB: Docker Postgres on host port 5433)
 
 echo "🚀 Starting Vinhomes Backend..."
 echo "================================"
 
-# Navigate to backend directory
 cd "$(dirname "$0")" || exit
 
-# Check if docker containers are running
-echo "📦 Checking Docker containers..."
-if ! docker-compose ps | grep -q "vinhomes_postgres"; then
-    echo "🐘 Starting PostgreSQL container..."
+echo "📦 Checking Docker PostgreSQL (vinhomes_postgres)..."
+if ! docker ps --format '{{.Names}}' | grep -qx 'vinhomes_postgres'; then
+    echo "🐘 Starting PostgreSQL container on host port 5433..."
     docker-compose up -d postgres
-    echo "⏳ Waiting for database to be ready..."
-    sleep 5
 fi
 
-# Run the application
+echo "⏳ Waiting for database on 127.0.0.1:5433..."
+for i in {1..30}; do
+    if docker exec vinhomes_postgres pg_isready -U vinhomes_user -d vinhomes_db >/dev/null 2>&1; then
+        echo "✅ Docker PostgreSQL is ready"
+        break
+    fi
+    sleep 1
+done
+
 echo ""
 echo "🔧 Starting application..."
-echo "📝 Configuration loaded from .env"
+echo "📝 DB config: 127.0.0.1:5433 (Docker) — see config/.env"
 echo ""
-echo "🌐 Server will be available at: http://localhost:8080"
-echo "📊 API documentation at: http://localhost:8080/docs (if swagger enabled)"
+echo "🌐 Server: http://localhost:8080"
+echo "   Health: curl http://localhost:8080/health"
 echo ""
-echo "To test the API:"
-echo "  curl http://localhost:8080/health"
-echo ""
-echo "Press Ctrl+C to stop the server"
+echo "Press Ctrl+C to stop"
 echo ""
 
 go run ./cmd/main.go

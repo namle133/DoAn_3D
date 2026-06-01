@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
@@ -11,11 +12,73 @@ import (
 )
 
 type CreateNotificationRequest struct {
-	UserID    string `json:"user_id" binding:"required"`
+	UserID    string `json:"user_id"`
+	Target    string `json:"target"` // single, all_users, residents, staff, managers
 	Title     string `json:"title" binding:"required"`
 	Message   string `json:"message" binding:"required"`
 	Type      string `json:"type" binding:"required"`
 	RelatedID string `json:"related_id,omitempty"`
+}
+
+type NotificationListItem struct {
+	ID        string     `json:"id"`
+	UserID    string     `json:"user_id"`
+	Username  string     `json:"username,omitempty"`
+	Title     string     `json:"title"`
+	Message   string     `json:"message"`
+	Type      string     `json:"type"`
+	IsRead    bool       `json:"is_read"`
+	RelatedID string     `json:"related_id,omitempty"`
+	CreatedAt time.Time  `json:"created_at"`
+	ReadAt    *time.Time `json:"read_at,omitempty"`
+}
+
+func buildNotificationListItem(n models.Notification) NotificationListItem {
+	item := NotificationListItem{
+		ID: n.ID, UserID: n.UserID, Title: n.Title, Message: n.Message,
+		Type: n.Type, IsRead: n.IsRead, RelatedID: n.RelatedID,
+		CreatedAt: n.CreatedAt, ReadAt: n.ReadAt,
+	}
+	if n.User.Username != "" {
+		item.Username = n.User.Username
+	}
+	return item
+}
+
+func resolveNotificationRecipients(req CreateNotificationRequest) ([]string, error) {
+	target := req.Target
+	if target == "" || target == "single" {
+		if req.UserID == "" {
+			return nil, fmt.Errorf("Vui lòng chọn người nhận hoặc đối tượng gửi")
+		}
+		return []string{req.UserID}, nil
+	}
+
+	var users []models.User
+	q := database.DB.Where("status = ?", "active")
+	switch target {
+	case "all_users":
+		// all active users
+	case "residents":
+		q = q.Where("role = ?", "resident")
+	case "staff":
+		q = q.Where("role = ?", "staff")
+	case "managers":
+		q = q.Where("role IN ?", []string{"manager", "admin"})
+	default:
+		return nil, fmt.Errorf("Đối tượng gửi không hợp lệ")
+	}
+	if err := q.Find(&users).Error; err != nil {
+		return nil, err
+	}
+	ids := make([]string, 0, len(users))
+	for _, u := range users {
+		ids = append(ids, u.ID)
+	}
+	if len(ids) == 0 {
+		return nil, fmt.Errorf("Không tìm thấy người nhận phù hợp")
+	}
+	return ids, nil
 }
 
 // ========== Notification Handlers ==========
@@ -27,96 +90,143 @@ func CreateNotification(c *gin.Context) {
 		return
 	}
 
-	notification := models.Notification{
-		ID:        uuid.New().String(),
-		UserID:    req.UserID,
-		Title:     req.Title,
-		Message:   req.Message,
-		Type:      req.Type,
-		IsRead:    false,
-		RelatedID: req.RelatedID,
-		CreatedAt: time.Now(),
-	}
-
-	if err := database.DB.Create(&notification).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create notification"})
+	recipientIDs, err := resolveNotificationRecipients(req)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusCreated, notification)
+	now := time.Now()
+	created := make([]models.Notification, 0, len(recipientIDs))
+	for _, uid := range recipientIDs {
+		n := models.Notification{
+			ID: uuid.New().String(), UserID: uid,
+			Title: req.Title, Message: req.Message, Type: req.Type,
+			IsRead: false, RelatedID: req.RelatedID, CreatedAt: now,
+		}
+		if err := database.DB.Create(&n).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create notification"})
+			return
+		}
+		created = append(created, n)
+	}
+
+	c.JSON(http.StatusCreated, gin.H{
+		"data":    created,
+		"count":   len(created),
+		"success": true,
+		"message": fmt.Sprintf("Đã gửi %d thông báo", len(created)),
+	})
 }
 
 func GetUserNotifications(c *gin.Context) {
-	userID, _ := c.Get("user_id")
-	var notifications []models.Notification
+	currentUserID, _ := c.Get("user_id")
+	role, _ := c.Get("role")
+	scopeAll := c.Query("scope") == "all" && (role.(string) == "admin" || role.(string) == "manager")
 
-	// Get unread or recent notifications
-	if err := database.DB.Where("user_id = ?", userID.(string)).
-		Order("created_at DESC").
-		Limit(50).
-		Find(&notifications).Error; err != nil {
+	var notifications []models.Notification
+	query := database.DB.Preload("User")
+	if scopeAll {
+		query = query.Order("created_at DESC").Limit(100)
+	} else {
+		query = query.Where("user_id = ?", currentUserID.(string)).
+			Order("created_at DESC").Limit(100)
+	}
+	if err := query.Find(&notifications).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch notifications"})
 		return
 	}
 
-	c.JSON(http.StatusOK, notifications)
+	var unreadCount int64
+	database.DB.Model(&models.Notification{}).
+		Where("user_id = ? AND is_read = ?", currentUserID.(string), false).
+		Count(&unreadCount)
+
+	items := make([]NotificationListItem, 0, len(notifications))
+	for _, n := range notifications {
+		items = append(items, buildNotificationListItem(n))
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data":          items,
+		"unread_count":  unreadCount,
+		"scope":         map[bool]string{true: "all", false: "mine"}[scopeAll],
+	})
 }
 
 func GetUnreadNotifications(c *gin.Context) {
 	userID, _ := c.Get("user_id")
 	var notifications []models.Notification
 
-	if err := database.DB.Where("user_id = ? AND is_read = ?", userID.(string), false).
-		Order("created_at DESC").
+	if err := database.DB.Preload("User").Where("user_id = ? AND is_read = ?", userID.(string), false).
+		Order("created_at DESC").Limit(50).
 		Find(&notifications).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch notifications"})
 		return
 	}
 
-	c.JSON(http.StatusOK, notifications)
+	items := make([]NotificationListItem, 0, len(notifications))
+	for _, n := range notifications {
+		items = append(items, buildNotificationListItem(n))
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": items, "unread_count": len(items)})
 }
 
 func MarkNotificationAsRead(c *gin.Context) {
 	id := c.Param("id")
+	userID, _ := c.Get("user_id")
 	now := time.Now()
 
-	if err := database.DB.Model(&models.Notification{}).Where("id = ?", id).
-		Updates(map[string]interface{}{
-			"is_read": true,
-			"read_at": now,
-		}).Error; err != nil {
+	res := database.DB.Model(&models.Notification{}).
+		Where("id = ? AND user_id = ?", id, userID.(string)).
+		Updates(map[string]interface{}{"is_read": true, "read_at": now})
+	if res.RowsAffected == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Không tìm thấy thông báo"})
+		return
+	}
+	if res.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to mark notification as read"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Notification marked as read"})
+	c.JSON(http.StatusOK, gin.H{"message": "Notification marked as read", "success": true})
 }
 
 func MarkAllNotificationsAsRead(c *gin.Context) {
 	userID, _ := c.Get("user_id")
 	now := time.Now()
 
-	if err := database.DB.Model(&models.Notification{}).Where("user_id = ?", userID.(string)).
-		Updates(map[string]interface{}{
-			"is_read": true,
-			"read_at": now,
-		}).Error; err != nil {
+	if err := database.DB.Model(&models.Notification{}).
+		Where("user_id = ? AND is_read = ?", userID.(string), false).
+		Updates(map[string]interface{}{"is_read": true, "read_at": now}).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to mark notifications as read"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "All notifications marked as read"})
+	c.JSON(http.StatusOK, gin.H{"message": "All notifications marked as read", "success": true})
 }
 
 func DeleteNotification(c *gin.Context) {
 	id := c.Param("id")
+	userID, _ := c.Get("user_id")
+	role, _ := c.Get("role")
 
-	if err := database.DB.Delete(&models.Notification{}, "id = ?", id).Error; err != nil {
+	q := database.DB.Where("id = ?", id)
+	if role.(string) != "admin" {
+		q = q.Where("user_id = ?", userID.(string))
+	}
+	res := q.Delete(&models.Notification{})
+	if res.RowsAffected == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Không tìm thấy thông báo"})
+		return
+	}
+	if res.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete notification"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Notification deleted"})
+	c.JSON(http.StatusOK, gin.H{"message": "Notification deleted", "success": true})
 }
 
 // ========== Dashboard/KPI Handlers ==========
@@ -136,6 +246,7 @@ func GetDashboardKPIs(c *gin.Context) {
 		PendingMaintenanceReqs int64   `json:"pending_maintenance_requests"`
 		AvgResponseTime        float64 `json:"avg_response_time_hours"`
 		MonthlyRevenue         float64 `json:"monthly_revenue"`
+		MonthlyCollected       float64 `json:"monthly_collected"`
 		OverdueInvoices        int64   `json:"overdue_invoices"`
 		OverdueAmount          float64 `json:"overdue_amount"`
 	}
@@ -174,10 +285,13 @@ func GetDashboardKPIs(c *gin.Context) {
 	database.DB.Model(&models.Invoice{}).Where("status IN ?", []string{"pending", "overdue"}).
 		Select("SUM(total_amount - paid_amount)").Row().Scan(&kpi.OutstandingInvoices)
 
-	// Overdue invoices count and amount
-	database.DB.Model(&models.Invoice{}).Where("status = ?", "overdue").Count(&kpi.OverdueInvoices)
-	database.DB.Model(&models.Invoice{}).Where("status = ?", "overdue").
-		Select("SUM(total_amount - paid_amount)").Row().Scan(&kpi.OverdueAmount)
+	// Hóa đơn quá hạn — cùng logic với GET /invoices/overdue
+	now := time.Now()
+	overdueQ := database.DB.Model(&models.Invoice{}).
+		Where("(status = ? OR (status = ? AND due_date < ?))", "overdue", "pending", now).
+		Where("(total_amount - paid_amount) > 0")
+	overdueQ.Count(&kpi.OverdueInvoices)
+	overdueQ.Select("COALESCE(SUM(total_amount - paid_amount), 0)").Row().Scan(&kpi.OverdueAmount)
 
 	// Collection rate (paid amount / total billed)
 	var totalBilled, totalPaid float64
@@ -188,10 +302,17 @@ func GetDashboardKPIs(c *gin.Context) {
 		kpi.CollectionRate = (totalPaid / totalBilled) * 100
 	}
 
-	// Monthly revenue (sum of paid invoices this month)
+	// Doanh thu tháng = tổng tiền thuê từ HĐ đang active trong tháng hiện tại
+	monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+	monthEnd := monthStart.AddDate(0, 1, 0).Add(-time.Nanosecond)
+	database.DB.Model(&models.Contract{}).
+		Where("status = ? AND start_date <= ? AND end_date >= ?", "active", monthEnd, monthStart).
+		Select("COALESCE(SUM(monthly_rent), 0)").Row().Scan(&kpi.MonthlyRevenue)
+
+	// Tiền đã thu thực tế trong tháng (hóa đơn status=paid)
 	database.DB.Model(&models.Invoice{}).
 		Where("status = ? AND EXTRACT(YEAR FROM updated_at) = EXTRACT(YEAR FROM NOW()) AND EXTRACT(MONTH FROM updated_at) = EXTRACT(MONTH FROM NOW())", "paid").
-		Select("SUM(paid_amount)").Row().Scan(&kpi.MonthlyRevenue)
+		Select("COALESCE(SUM(paid_amount), 0)").Row().Scan(&kpi.MonthlyCollected)
 
 	// Pending maintenance requests
 	database.DB.Model(&models.MaintenanceRequest{}).Where("status IN ?", []string{"new", "assigned"}).Count(&kpi.PendingMaintenanceReqs)
