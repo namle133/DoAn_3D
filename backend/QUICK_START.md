@@ -18,9 +18,12 @@ cd backend
 
 ### 3. Setup Environment
 ```bash
-# Copy environment template
+# Copy environment template (trỏ DB Docker cổng 5433)
 cp config/.env.example config/.env
 ```
+
+> **Lưu ý DB:** Backend chạy local (`go run`) kết nối PostgreSQL **trong Docker** qua `127.0.0.1:5433`.
+> Cổng `5432` trên máy thường là PostgreSQL hệ thống — không dùng cho đồ án này.
 
 ### 4. Download Dependencies
 ```bash
@@ -33,11 +36,12 @@ go mod tidy
 # Make sure Docker is running
 docker-compose up -d postgres
 
-# Wait 10 seconds for database to start
+# Wait for database to start
 sleep 10
 
-# Verify connection
+# Verify connection (Docker mapped port 5433)
 docker-compose logs postgres
+docker exec vinhomes_postgres pg_isready -U vinhomes_user -d vinhomes_db
 ```
 
 ### 6. Run Application
@@ -176,11 +180,15 @@ docker-compose up -d postgres
 SERVER_PORT=8081
 ```
 
-### Database migration error
-**Solution:** Ensure PostGIS is installed
+### Error: "database vinhomes_db does not exist"
+**Solution:** Start Docker Postgres and init DB
 ```bash
-docker-compose exec postgres psql -U vinhomes_user -d vinhomes_db -c "CREATE EXTENSION postgis;"
+docker-compose up -d postgres
+./init-postgres.sh   # hoặc docker-compose down -v && docker-compose up -d postgres (init.sql tự chạy)
 ```
+
+### Error: kết nối nhầm PostgreSQL local (port 5432)
+**Solution:** Dùng `config/.env` với `DB_HOST=127.0.0.1` và `DB_PORT=5433`
 
 ### Port issues with Docker
 **Solution:** Check container status

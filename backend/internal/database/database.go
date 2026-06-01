@@ -33,6 +33,7 @@ func InitDatabase(cfg *config.Config) error {
 	}
 
 	SeedDemoData()
+	RepairOrphanResidents()
 	return nil
 }
 
