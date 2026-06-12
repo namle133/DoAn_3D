@@ -27,6 +27,13 @@ const invoiceAPI = {
   },
 
   /**
+   * Update invoice (Admin/Manager only)
+   */
+  async updateInvoice(id, data) {
+    return apiClient.put(`/invoices/${id}`, data);
+  },
+
+  /**
    * Record payment (Staff/Manager only)
    */
   async recordPayment(invoiceID, data) {

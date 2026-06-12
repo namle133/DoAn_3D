@@ -726,13 +726,9 @@
         <div class="form-row">
           <div class="form-group required">
             <label for="createApartment">Căn hộ</label>
-            <input 
-              type="text" 
-              id="createApartment" 
-              placeholder="Tìm kiếm căn hộ..."
-              autocomplete="off"
-            />
-            <div id="apartmentDropdown" style="position: absolute; background: white; border: 1px solid #ddd; border-top: none; max-height: 200px; overflow-y: auto; width: 48%; z-index: 10; display: none;"></div>
+            <select id="createApartment" required>
+              <option value="">-- Chọn căn hộ --</option>
+            </select>
           </div>
           <div class="form-group required">
             <label for="createIssueType">Loại vấn đề</label>
@@ -772,18 +768,24 @@
           </div>
         </div>
 
+        <div class="form-group">
+          <label for="createLocation">Vị trí trong căn hộ</label>
+          <input type="text" id="createLocation" placeholder="VD: Phòng khách, nhà bếp, ban công..." />
+        </div>
+
         <div class="form-group required">
           <label for="createDescription">Mô tả chi tiết</label>
           <textarea 
             id="createDescription" 
             placeholder="Mô tả vấn đề, triệu chứng, vị trí cụ thể..."
+            required
           ></textarea>
         </div>
 
-        <div class="form-group">
-          <label for="createAssignTo">Phân công cho nhân viên</label>
+        <div class="form-group" id="createAssignGroup">
+          <label for="createAssignTo">Phân công cho nhân viên (tùy chọn)</label>
           <select id="createAssignTo">
-            <option value="">-- Không phân công --</option>
+            <option value="">-- Chưa phân công --</option>
           </select>
         </div>
 
@@ -907,39 +909,64 @@
     import { initLayout } from '../js/modules/layout.js';
     import maintenanceAPI from '../js/api/maintenance.js';
     import buildingAPI from '../js/api/buildings.js';
-    import residentAPI from '../js/api/residents.js';
+    import contractAPI from '../js/api/contracts.js';
+    import usersAPI from '../js/api/users.js';
+    import authAPI from '../js/api/auth.js';
     import { formatDate, showToast, debounce } from '../js/utils/helpers.js';
     import { MAINTENANCE_STATUS, MAINTENANCE_PRIORITY, ROLES } from '../js/utils/constants.js';
 
-    // State
+    const PRIORITY_UI_TO_API = {
+      low: 'low',
+      medium: 'medium',
+      high: 'high',
+      urgent: 'urgent',
+    };
+
+    const PRIORITY_API_TO_UI = {
+      low: 'low',
+      normal: 'medium',
+      urgent: 'urgent',
+    };
+
     let allRequests = [];
-    let filteredRequests = [];
     let allApartments = [];
+    let allContracts = [];
     let allStaff = [];
     let currentUser = null;
     let currentRole = null;
+    let currentResidentId = null;
     let selectedRequestId = null;
     let createPhotos = [];
     let completePhotos = [];
+    const isStaffRole = () => [ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF].includes(currentRole);
 
-    // Initialize
     async function init() {
       try {
         await initLayout();
         currentUser = authManager.getCurrentUser();
         currentRole = authManager.getUserRole();
 
-        // Load data
+        if (currentRole === ROLES.RESIDENT) {
+          try {
+            const profile = await authAPI.getProfile();
+            const user = profile.data || profile;
+            currentResidentId = user.resident?.id || null;
+          } catch (_) {}
+        }
+
+        document.getElementById('createAssignGroup').style.display = isStaffRole() ? 'block' : 'none';
+        if (!isStaffRole()) {
+          document.getElementById('createRequestBtn').textContent = '+ Tạo yêu cầu bảo trì';
+        }
+
         await Promise.all([
           loadMaintenanceRequests(),
           loadApartments(),
+          loadContracts(),
           loadStaff(),
         ]);
 
-        // Setup event listeners
         setupEventListeners();
-
-        // Update KPIs
         updateKPIs();
       } catch (error) {
         console.error('Error initializing:', error);
@@ -990,9 +1017,6 @@
       document.getElementById('statusFilter').addEventListener('change', filterRequests);
       document.getElementById('priorityFilter').addEventListener('change', filterRequests);
 
-      // Apartment search
-      document.getElementById('createApartment').addEventListener('input', handleApartmentSearch);
-
       // File uploads
       document.getElementById('createPhotos').addEventListener('change', (e) => handleFileUpload(e, 'create'));
       document.getElementById('completePhotos').addEventListener('change', (e) => handleFileUpload(e, 'complete'));
@@ -1001,11 +1025,12 @@
     async function loadMaintenanceRequests() {
       try {
         const response = await maintenanceAPI.getMaintenanceRequests();
-        // Handle both array and object responses
-        allRequests = Array.isArray(response) ? response : (response.data || response.requests || []);
-        renderRequests(allRequests);
+        allRequests = Array.isArray(response) ? response : (response.data || []);
+        filterRequests();
       } catch (error) {
         console.error('Error loading maintenance requests:', error);
+        document.getElementById('maintenanceContainer').innerHTML =
+          `<div class="empty-state"><p>Lỗi tải dữ liệu: ${error.message}</p></div>`;
         showToast(`Lỗi tải yêu cầu bảo trì: ${error.message}`, 'error');
       }
     }
@@ -1013,20 +1038,27 @@
     async function loadApartments() {
       try {
         const response = await buildingAPI.getApartments();
-        // Handle both array and object responses
-        allApartments = Array.isArray(response) ? response : (response.data || response.apartments || []);
+        allApartments = Array.isArray(response) ? response : (response.data || []);
       } catch (error) {
         console.error('Error loading apartments:', error);
-        showToast(`Lỗi tải căn hộ: ${error.message}`, 'error');
+      }
+    }
+
+    async function loadContracts() {
+      try {
+        const response = await contractAPI.getContracts();
+        allContracts = Array.isArray(response) ? response : (response.data || []);
+      } catch (error) {
+        console.error('Error loading contracts:', error);
       }
     }
 
     async function loadStaff() {
+      if (!isStaffRole()) return;
       try {
-        const response = await residentAPI.getResidents();
-        // Handle both array and object responses
-        const staffData = Array.isArray(response) ? response : (response.data || response.residents || []);
-        allStaff = staffData.filter(r => [ROLES.STAFF, ROLES.MANAGER].includes(r.role));
+        const response = await usersAPI.getUsers();
+        const users = response.data || [];
+        allStaff = users.filter((u) => [ROLES.STAFF, ROLES.MANAGER].includes(u.role) && u.status === 'active');
         populateStaffDropdowns();
       } catch (error) {
         console.error('Error loading staff:', error);
@@ -1037,49 +1069,55 @@
       const createSelect = document.getElementById('createAssignTo');
       const assignSelect = document.getElementById('assignStaff');
 
-      [createSelect, assignSelect].forEach(select => {
-        const currentValue = select.value;
-        select.innerHTML = '<option value="">-- Không chọn --</option>';
+      [createSelect, assignSelect].forEach((select) => {
+        const placeholder = select === assignSelect ? '-- Chọn nhân viên --' : '-- Chưa phân công --';
+        select.innerHTML = `<option value="">${placeholder}</option>`;
         allStaff.forEach((staff) => {
           const option = document.createElement('option');
           option.value = staff.id;
-          option.textContent = staff.name;
+          option.textContent = `${staff.username} (${staff.role})`;
           select.appendChild(option);
         });
-        select.value = currentValue;
       });
     }
 
-    function handleApartmentSearch() {
-      const input = document.getElementById('createApartment');
-      const dropdown = document.getElementById('apartmentDropdown');
-      const searchTerm = input.value.toLowerCase();
+    function populateApartmentDropdown() {
+      const select = document.getElementById('createApartment');
+      select.innerHTML = '<option value="">-- Chọn căn hộ --</option>';
 
-      if (searchTerm.length === 0) {
-        dropdown.style.display = 'none';
-        return;
+      let list = allApartments;
+      if (currentRole === ROLES.RESIDENT) {
+        const aptIds = new Set(
+          allContracts
+            .filter((c) => ['active', 'extended'].includes(c.status))
+            .map((c) => c.apartment_id)
+        );
+        list = allApartments.filter((a) => aptIds.has(a.id));
+        if (list.length === 0) {
+          const hint = document.createElement('option');
+          hint.disabled = true;
+          hint.textContent = '— Chưa có căn hộ thuê (cần HĐ active) —';
+          select.appendChild(hint);
+          return;
+        }
       }
 
-      const filtered = allApartments.filter(apt =>
-        (apt.apartment_number || '').toLowerCase().includes(searchTerm) ||
-        (apt.name || '').toLowerCase().includes(searchTerm)
-      );
+      list.forEach((apt) => {
+        const option = document.createElement('option');
+        option.value = apt.id;
+        option.textContent = apt.apartment_code || apt.id;
+        select.appendChild(option);
+      });
+    }
 
-      if (filtered.length === 0) {
-        dropdown.style.display = 'none';
-        return;
-      }
+    function displayPriority(priority) {
+      const ui = PRIORITY_API_TO_UI[priority] || priority;
+      return getPriorityLabel(ui);
+    }
 
-      dropdown.innerHTML = filtered
-        .slice(0, 10)
-        .map(apt => `
-          <div style="padding: 10px; cursor: pointer; border-bottom: 1px solid #eee; hover-background: #f5f5f5;" 
-               onclick="window.maintenanceApp.selectApartment('${apt.id}', '${apt.apartment_number || apt.name}')">
-            ${apt.apartment_number || apt.name}
-          </div>
-        `)
-        .join('');
-      dropdown.style.display = 'block';
+    function priorityClass(priority) {
+      const ui = PRIORITY_API_TO_UI[priority] || priority;
+      return `priority-${ui}`;
     }
 
     function handleFileUpload(e, type) {
@@ -1149,14 +1187,21 @@
             </tr>
           </thead>
           <tbody>
-            ${requests.map(request => `
+            ${requests.map((request) => {
+              const canManage = isStaffRole();
+              const canAssign = canManage && request.status === MAINTENANCE_STATUS.NEW;
+              const canComplete = canManage && [MAINTENANCE_STATUS.ASSIGNED, MAINTENANCE_STATUS.IN_PROGRESS].includes(request.status);
+              const canCancel = (canManage || currentRole === ROLES.RESIDENT) &&
+                [MAINTENANCE_STATUS.NEW, MAINTENANCE_STATUS.ASSIGNED].includes(request.status);
+              const canStart = canManage && request.status === MAINTENANCE_STATUS.ASSIGNED;
+              return `
               <tr>
-                <td><strong>#${request.request_number || request.id.slice(0, 8)}</strong></td>
-                <td>${request.apartment_number || '-'}</td>
+                <td><strong>${request.request_code || request.request_number || request.id.slice(0, 8)}</strong></td>
+                <td>${request.apartment_code || request.apartment_number || '-'}</td>
                 <td>${getIssueTypeLabel(request.issue_type)}</td>
                 <td>
-                  <span class="priority-badge priority-${request.priority}">
-                    ${getPriorityLabel(request.priority)}
+                  <span class="priority-badge ${priorityClass(request.priority)}">
+                    ${displayPriority(request.priority)}
                   </span>
                 </td>
                 <td>
@@ -1165,23 +1210,18 @@
                   </span>
                 </td>
                 <td>${request.assigned_to_name || '-'}</td>
-                <td>${formatDate(request.created_date)}</td>
+                <td>${formatDate(request.created_at || request.created_date)}</td>
                 <td>
                   <div class="action-btns">
                     <button class="btn-sm" onclick="window.maintenanceApp.viewDetails('${request.id}')">Chi tiết</button>
-                    ${request.status === MAINTENANCE_STATUS.NEW ? `
-                      <button class="btn-sm" onclick="window.maintenanceApp.openAssignModal('${request.id}')">Phân công</button>
-                    ` : ''}
-                    ${[MAINTENANCE_STATUS.ASSIGNED, MAINTENANCE_STATUS.IN_PROGRESS].includes(request.status) ? `
-                      <button class="btn-sm success" onclick="window.maintenanceApp.openCompleteModal('${request.id}')">Hoàn thành</button>
-                    ` : ''}
-                    ${[MAINTENANCE_STATUS.NEW, MAINTENANCE_STATUS.ASSIGNED].includes(request.status) ? `
-                      <button class="btn-sm danger" onclick="window.maintenanceApp.cancelRequest('${request.id}')">Hủy</button>
-                    ` : ''}
+                    ${canAssign ? `<button class="btn-sm" onclick="window.maintenanceApp.openAssignModal('${request.id}')">Phân công</button>` : ''}
+                    ${canStart ? `<button class="btn-sm" onclick="window.maintenanceApp.startProgress('${request.id}')">Bắt đầu</button>` : ''}
+                    ${canComplete ? `<button class="btn-sm success" onclick="window.maintenanceApp.openCompleteModal('${request.id}')">Hoàn thành</button>` : ''}
+                    ${canCancel ? `<button class="btn-sm danger" onclick="window.maintenanceApp.cancelRequest('${request.id}')">Hủy</button>` : ''}
                   </div>
                 </td>
-              </tr>
-            `).join('')}
+              </tr>`;
+            }).join('')}
           </tbody>
         </table>
       `;
@@ -1192,18 +1232,21 @@
       const statusFilter = document.getElementById('statusFilter').value;
       const priorityFilter = document.getElementById('priorityFilter').value;
 
-      filteredRequests = allRequests.filter(request => {
+      const filtered = allRequests.filter((request) => {
+        const aptCode = (request.apartment_code || request.apartment_number || '').toLowerCase();
         const matchesSearch =
-          (request.apartment_number || '').toLowerCase().includes(searchTerm) ||
+          aptCode.includes(searchTerm) ||
           (request.issue_type || '').toLowerCase().includes(searchTerm) ||
-          (request.description || '').toLowerCase().includes(searchTerm);
+          (request.description || '').toLowerCase().includes(searchTerm) ||
+          (request.request_code || '').toLowerCase().includes(searchTerm);
         const matchesStatus = !statusFilter || request.status === statusFilter;
-        const matchesPriority = !priorityFilter || request.priority === priorityFilter;
+        const uiPriority = PRIORITY_API_TO_UI[request.priority] || request.priority;
+        const matchesPriority = !priorityFilter || uiPriority === priorityFilter;
 
         return matchesSearch && matchesStatus && matchesPriority;
       });
 
-      renderRequests(filteredRequests);
+      renderRequests(filtered);
     }
 
     function updateKPIs() {
@@ -1212,11 +1255,13 @@
       let completedCount = 0;
       let urgentCount = 0;
 
-      allRequests.forEach(request => {
+      allRequests.forEach((request) => {
         if (request.status === MAINTENANCE_STATUS.NEW) newCount++;
-        if (request.status === MAINTENANCE_STATUS.IN_PROGRESS) inProgressCount++;
+        if ([MAINTENANCE_STATUS.ASSIGNED, MAINTENANCE_STATUS.IN_PROGRESS].includes(request.status)) {
+          inProgressCount++;
+        }
         if (request.status === MAINTENANCE_STATUS.COMPLETED) completedCount++;
-        if (request.priority === MAINTENANCE_PRIORITY.URGENT) urgentCount++;
+        if (request.priority === 'urgent' || request.priority === MAINTENANCE_PRIORITY.URGENT) urgentCount++;
       });
 
       document.getElementById('newRequestsCount').textContent = newCount;
@@ -1229,6 +1274,7 @@
     function openCreateModal() {
       document.getElementById('createModalTitle').textContent = 'Tạo yêu cầu bảo trì';
       resetCreateForm();
+      populateApartmentDropdown();
       document.getElementById('createModal').classList.add('show');
     }
 
@@ -1242,6 +1288,7 @@
       createPhotos = [];
       document.getElementById('createPhotoPreview').innerHTML = '';
       document.getElementById('createFormError').classList.remove('show');
+      document.querySelector('input[name="priorityLevel"][value="low"]').checked = true;
     }
 
     function openAssignModal(requestId) {
@@ -1283,40 +1330,35 @@
     async function handleCreateRequest(e) {
       e.preventDefault();
 
-      const apartmentId = document.getElementById('createApartment').dataset.apartmentId;
+      const apartmentId = document.getElementById('createApartment').value;
       const issueType = document.getElementById('createIssueType').value;
       const priority = document.querySelector('input[name="priorityLevel"]:checked').value;
-      const description = document.getElementById('createDescription').value;
-      const assignTo = document.getElementById('createAssignTo').value || null;
+      const description = document.getElementById('createDescription').value.trim();
+      const location = document.getElementById('createLocation').value.trim();
+      const assignTo = isStaffRole() ? document.getElementById('createAssignTo').value : '';
 
-      if (!apartmentId || !issueType || !priority || !description) {
+      if (!apartmentId || !issueType || !description) {
         showFormError('createFormError', 'Vui lòng điền đầy đủ thông tin bắt buộc');
         return;
       }
 
       try {
-        const apartment = allApartments.find(a => a.id === apartmentId);
-        
         const requestData = {
           apartment_id: apartmentId,
-          apartment_number: apartment?.apartment_number || 'N/A',
           issue_type: issueType,
-          priority: priority,
-          description: description,
-          assigned_to: assignTo,
-          status: assignTo ? MAINTENANCE_STATUS.ASSIGNED : MAINTENANCE_STATUS.NEW,
-          photos: createPhotos.map(p => p.data),
-          created_date: new Date().toISOString(),
+          priority: PRIORITY_UI_TO_API[priority] || priority,
+          description,
+          location,
+          photos: createPhotos.map((p) => p.data).slice(0, 5),
         };
+        if (currentResidentId) requestData.resident_id = currentResidentId;
+        if (assignTo) requestData.assigned_to = assignTo;
 
-        const response = await maintenanceAPI.createMaintenanceRequest(requestData);
-
-        if (response.success || response.data) {
-          showToast('Yêu cầu bảo trì đã được tạo thành công', 'success');
-          closeCreateModal();
-          await loadMaintenanceRequests();
-          updateKPIs();
-        }
+        await maintenanceAPI.createMaintenanceRequest(requestData);
+        showToast('Yêu cầu bảo trì đã được tạo thành công', 'success');
+        closeCreateModal();
+        await loadMaintenanceRequests();
+        updateKPIs();
       } catch (error) {
         console.error('Error creating request:', error);
         showFormError('createFormError', error.message || 'Lỗi tạo yêu cầu bảo trì');
@@ -1335,22 +1377,14 @@
       }
 
       try {
-        const staff = allStaff.find(s => s.id === staffId);
-        
-        const assignData = {
+        await maintenanceAPI.assignMaintenanceRequest(selectedRequestId, {
           assigned_to: staffId,
-          assigned_to_name: staff?.name,
-          notes: notes,
-        };
-
-        const response = await maintenanceAPI.assignMaintenanceRequest(selectedRequestId, assignData);
-
-        if (response.success || response.data) {
-          showToast('Yêu cầu đã được phân công thành công', 'success');
-          closeAssignModal();
-          await loadMaintenanceRequests();
-          updateKPIs();
-        }
+          notes,
+        });
+        showToast('Yêu cầu đã được phân công thành công', 'success');
+        closeAssignModal();
+        await loadMaintenanceRequests();
+        updateKPIs();
       } catch (error) {
         console.error('Error assigning request:', error);
         showFormError('assignFormError', error.message || 'Lỗi phân công yêu cầu');
@@ -1371,23 +1405,16 @@
       }
 
       try {
-        const completeData = {
-          resolution: resolution,
-          notes: notes,
-          cost: cost,
+        await maintenanceAPI.completeMaintenanceRequest(selectedRequestId, {
+          resolution,
+          notes,
+          cost,
           technician_name: technician,
-          photos: completePhotos.map(p => p.data),
-          completed_date: new Date().toISOString(),
-        };
-
-        const response = await maintenanceAPI.completeMaintenanceRequest(selectedRequestId, completeData);
-
-        if (response.success || response.data) {
-          showToast('Yêu cầu bảo trì đã được hoàn thành', 'success');
-          closeCompleteModal();
-          await loadMaintenanceRequests();
-          updateKPIs();
-        }
+        });
+        showToast('Yêu cầu bảo trì đã được hoàn thành', 'success');
+        closeCompleteModal();
+        await loadMaintenanceRequests();
+        updateKPIs();
       } catch (error) {
         console.error('Error completing request:', error);
         showFormError('completeFormError', error.message || 'Lỗi hoàn thành yêu cầu');
@@ -1433,107 +1460,69 @@
       return labels[issueType] || issueType;
     }
 
-    // Public methods for onclick handlers
     window.maintenanceApp = {
-      selectApartment: (apartmentId, apartmentNumber) => {
-        document.getElementById('createApartment').value = apartmentNumber;
-        document.getElementById('createApartment').dataset.apartmentId = apartmentId;
-        document.getElementById('apartmentDropdown').style.display = 'none';
-      },
       removePhoto: (previewId, index) => {
         const photosArray = previewId === 'createPhotoPreview' ? createPhotos : completePhotos;
         photosArray.splice(index, 1);
         renderPhotoPreview(previewId, photosArray);
       },
-      viewDetails: async (requestId) => {
-        const request = allRequests.find(r => r.id === requestId);
+      viewDetails: (requestId) => {
+        const request = allRequests.find((r) => r.id === requestId);
         if (!request) return;
 
-        const detailsHtml = `
+        document.getElementById('viewDetails').innerHTML = `
           <div style="line-height: 1.8;">
             <div style="margin-bottom: 15px;">
-              <strong style="color: #667eea;">Yêu cầu #${request.request_number || request.id.slice(0, 8)}</strong>
+              <strong style="color: #667eea;">${request.request_code || request.id}</strong>
             </div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
-              <div>
-                <strong style="color: #666; font-size: 12px; text-transform: uppercase;">Căn hộ</strong><br/>
-                ${request.apartment_number || '-'}
-              </div>
-              <div>
-                <strong style="color: #666; font-size: 12px; text-transform: uppercase;">Loại vấn đề</strong><br/>
-                ${getIssueTypeLabel(request.issue_type)}
-              </div>
-              <div>
-                <strong style="color: #666; font-size: 12px; text-transform: uppercase;">Mức độ</strong><br/>
-                <span class="priority-badge priority-${request.priority}">${getPriorityLabel(request.priority)}</span>
-              </div>
-              <div>
-                <strong style="color: #666; font-size: 12px; text-transform: uppercase;">Trạng thái</strong><br/>
-                <span class="status-badge status-${request.status}">${getStatusLabel(request.status)}</span>
-              </div>
-              <div>
-                <strong style="color: #666; font-size: 12px; text-transform: uppercase;">Ngày tạo</strong><br/>
-                ${formatDate(request.created_date)}
-              </div>
-              <div>
-                <strong style="color: #666; font-size: 12px; text-transform: uppercase;">Phân công cho</strong><br/>
-                ${request.assigned_to_name || '-'}
-              </div>
+              <div><strong style="color:#666;font-size:12px;text-transform:uppercase">Căn hộ</strong><br/>${request.apartment_code || request.apartment_number || '-'}</div>
+              <div><strong style="color:#666;font-size:12px;text-transform:uppercase">Cư dân</strong><br/>${request.resident_name || '-'}</div>
+              <div><strong style="color:#666;font-size:12px;text-transform:uppercase">Loại vấn đề</strong><br/>${getIssueTypeLabel(request.issue_type)}</div>
+              <div><strong style="color:#666;font-size:12px;text-transform:uppercase">Mức độ</strong><br/>
+                <span class="priority-badge ${priorityClass(request.priority)}">${displayPriority(request.priority)}</span></div>
+              <div><strong style="color:#666;font-size:12px;text-transform:uppercase">Trạng thái</strong><br/>
+                <span class="status-badge status-${request.status}">${getStatusLabel(request.status)}</span></div>
+              <div><strong style="color:#666;font-size:12px;text-transform:uppercase">Phân công</strong><br/>${request.assigned_to_name || '-'}</div>
+              <div><strong style="color:#666;font-size:12px;text-transform:uppercase">Ngày tạo</strong><br/>${formatDate(request.created_at || request.created_date)}</div>
+              ${request.location ? `<div><strong style="color:#666;font-size:12px;text-transform:uppercase">Vị trí</strong><br/>${request.location}</div>` : ''}
             </div>
-            <div style="margin-bottom: 15px;">
-              <strong style="color: #666; font-size: 12px; text-transform: uppercase;">Mô tả</strong><br/>
-              ${request.description || '-'}
-            </div>
-            ${request.resolution ? `
-              <div style="margin-bottom: 15px; padding: 10px; background: #e8f5e9; border-left: 3px solid #4CAF50; border-radius: 3px;">
-                <strong style="color: #2e7d32;">Giải pháp</strong><br/>
-                ${request.resolution}
-              </div>
-            ` : ''}
-            ${request.cost ? `
-              <div style="margin-bottom: 15px;">
-                <strong style="color: #666; font-size: 12px; text-transform: uppercase;">Chi phí</strong><br/>
-                ${request.cost.toLocaleString('vi-VN')} VND
-              </div>
-            ` : ''}
-            ${request.completed_date ? `
-              <div style="margin-bottom: 15px;">
-                <strong style="color: #666; font-size: 12px; text-transform: uppercase;">Ngày hoàn thành</strong><br/>
-                ${formatDate(request.completed_date)}
-              </div>
-            ` : ''}
-          </div>
-        `;
-
-        document.getElementById('viewDetails').innerHTML = detailsHtml;
+            <div style="margin-bottom:15px"><strong style="color:#666;font-size:12px;text-transform:uppercase">Mô tả</strong><br/>${request.description || '-'}</div>
+            ${request.completion_notes || request.resolution ? `
+              <div style="margin-bottom:15px;padding:10px;background:#e8f5e9;border-left:3px solid #4CAF50;border-radius:3px">
+                <strong style="color:#2e7d32">Kết quả xử lý</strong><br/>${(request.completion_notes || request.resolution).replace(/\n/g, '<br/>')}
+              </div>` : ''}
+            ${request.completed_at || request.completed_date ? `
+              <div><strong style="color:#666;font-size:12px;text-transform:uppercase">Ngày hoàn thành</strong><br/>
+              ${formatDate(request.completed_at || request.completed_date)}</div>` : ''}
+          </div>`;
         document.getElementById('viewModal').classList.add('show');
       },
       openAssignModal,
       openCompleteModal,
+      startProgress: async (requestId) => {
+        try {
+          await maintenanceAPI.updateMaintenanceStatus(requestId, MAINTENANCE_STATUS.IN_PROGRESS);
+          showToast('Đã chuyển sang trạng thái đang xử lý', 'success');
+          await loadMaintenanceRequests();
+          updateKPIs();
+        } catch (error) {
+          showToast(`Lỗi: ${error.message}`, 'error');
+        }
+      },
       cancelRequest: async (requestId) => {
         if (!confirm('Bạn có chắc chắn muốn hủy yêu cầu này?')) return;
-        
         try {
-          const response = await maintenanceAPI.updateMaintenanceStatus(requestId, MAINTENANCE_STATUS.CANCELLED);
-          if (response.success || response.data) {
-            showToast('Yêu cầu đã được hủy', 'success');
-            await loadMaintenanceRequests();
-            updateKPIs();
-          }
+          await maintenanceAPI.updateMaintenanceStatus(requestId, 'cancelled');
+          showToast('Yêu cầu đã được hủy', 'success');
+          await loadMaintenanceRequests();
+          updateKPIs();
         } catch (error) {
           showToast(`Lỗi: ${error.message}`, 'error');
         }
       },
     };
 
-    // Hide apartment dropdown when clicking outside
-    document.addEventListener('click', (e) => {
-      if (e.target.id !== 'createApartment' && !e.target.closest('#apartmentDropdown')) {
-        document.getElementById('apartmentDropdown').style.display = 'none';
-      }
-    });
-
-    // Initialize the page
     init();
   </script>
 </body>

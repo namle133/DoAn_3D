@@ -696,12 +696,22 @@
 
   <script type="module">
     import { initLayout } from '../js/modules/layout.js';
+    import authManager from '../js/modules/auth-manager.js';
     import contractAPI from '../js/api/contracts.js';
     import buildingAPI from '../js/api/buildings.js';
     import residentAPI from '../js/api/residents.js';
     import { formatDate, formatCurrency, showToast } from '../js/utils/helpers.js';
 
-    await initLayout({ requiredRoles: ['admin', 'manager', 'staff'] });
+    await initLayout({ requiredRoles: ['admin', 'manager', 'staff', 'resident'] });
+
+    const canManage = authManager.hasRole(['admin', 'manager', 'staff']);
+    const isResident = authManager.isResident();
+
+    if (isResident) {
+      document.getElementById('addContractBtn').style.display = 'none';
+      document.querySelector('.page-title').textContent = 'Hợp đồng của tôi';
+      document.getElementById('searchInput').placeholder = 'Tìm kiếm theo số hợp đồng...';
+    }
 
     // DOM Elements
     const contractsContainer = document.getElementById('contractsContainer');
@@ -729,22 +739,43 @@
     // Load initial data
     async function loadInitialData() {
       try {
-        const [contractsRes, residentsRes, apartmentsRes] = await Promise.all([
-          contractAPI.getContracts(),
-          residentAPI.getResidents(),
-          buildingAPI.getApartments(),
-        ]);
-
+        const contractsRes = await contractAPI.getContracts();
         contracts = Array.isArray(contractsRes) ? contractsRes : (contractsRes.data || contractsRes.contracts || []);
-        residents = Array.isArray(residentsRes) ? residentsRes : (residentsRes.data || residentsRes.residents || []);
-        apartments = Array.isArray(apartmentsRes) ? apartmentsRes : (apartmentsRes.data || apartmentsRes.apartments || []);
 
-        populateSelects();
+        if (canManage) {
+          const [residentsRes, apartmentsRes] = await Promise.all([
+            residentAPI.getResidents(),
+            buildingAPI.getApartments(),
+          ]);
+          residents = Array.isArray(residentsRes) ? residentsRes : (residentsRes.data || residentsRes.residents || []);
+          apartments = Array.isArray(apartmentsRes) ? apartmentsRes : (apartmentsRes.data || apartmentsRes.apartments || []);
+          populateSelects();
+        } else {
+          // Lấy thông tin căn hộ từ preload của HĐ
+          apartments = contracts
+            .filter(c => c.Apartment || c.apartment)
+            .map(c => c.Apartment || c.apartment);
+        }
+
         renderContracts(contracts);
       } catch (error) {
         console.error('Error loading data:', error);
         showToast(`Lỗi tải dữ liệu: ${error.message}`, 'error');
       }
+    }
+
+    function getResidentInfo(contract) {
+      const rid = contract.resident_id || contract.ResidentID;
+      return residents.find(r => r.id === rid)
+        || contract.Resident || contract.resident
+        || { full_name: contract.resident_name, name: contract.resident_name };
+    }
+
+    function getApartmentInfo(contract) {
+      const aid = contract.apartment_id || contract.ApartmentID;
+      return apartments.find(a => a.id === aid)
+        || contract.Apartment || contract.apartment
+        || { apartment_code: contract.apartment_code, number: contract.apartment_number };
     }
 
     // Populate resident and apartment selects
@@ -758,13 +789,26 @@
         residentSelect.appendChild(option);
       });
 
-      // Populate apartment select
+      // Populate apartment select - exclude already rented apartments
       apartmentSelect.innerHTML = '<option value="">-- Chọn căn hộ --</option>';
       apartments.forEach((apartment) => {
-        const option = document.createElement('option');
-        option.value = apartment.id;
-        option.textContent = apartment.number || apartment.id;
-        apartmentSelect.appendChild(option);
+        // Check if apartment is rented (has active contract)
+        const activeContract = contracts.find(
+          c => c.apartment_id === apartment.id && c.status === 'active'
+        );
+        
+        // Show apartment if:
+        // 1. It's not rented, OR
+        // 2. It's being edited and currently assigned to this contract
+        const isBeingEdited = editingContractId && activeContract && activeContract.id === editingContractId;
+        
+        if (!activeContract || isBeingEdited) {
+          const option = document.createElement('option');
+          option.value = apartment.id;
+          const statusText = activeContract && !isBeingEdited ? ' (Đang thuê)' : '';
+          option.textContent = (apartment.number || apartment.apartment_code || apartment.id) + statusText;
+          apartmentSelect.appendChild(option);
+        }
       });
     }
 
@@ -791,24 +835,25 @@
           </thead>
           <tbody>
             ${data.map((contract) => {
-              const resident = residents.find(r => r.id === (contract.resident_id || contract.ResidentID));
-              const apartment = apartments.find(a => a.id === (contract.apartment_id || contract.ApartmentID));
+              const resident = getResidentInfo(contract);
+              const apartment = getApartmentInfo(contract);
+              const actionBtns = canManage
+                ? `<button class="btn-sm info" onclick="viewContract('${contract.id}')">Xem</button>
+                    ${contract.status === 'pending' ? `<button class="btn-sm success" onclick="approveContract('${contract.id}')">Duyệt</button>` : ''}
+                    ${contract.status === 'active' ? `<button class="btn-sm warning" onclick="extendContract('${contract.id}')">Gia hạn</button>` : ''}
+                    ${contract.status !== 'terminated' ? `<button class="btn-sm danger" onclick="terminateContract('${contract.id}')">Kết thúc</button>` : ''}`
+                : `<button class="btn-sm info" onclick="viewContract('${contract.id}')">Xem chi tiết</button>`;
               return `
               <tr>
-                <td>${contract.number || contract.id}</td>
-                <td>${resident?.full_name || resident?.name || contract.resident_name || '-'}</td>
-                <td>${apartment?.number || apartment?.apartment_code || contract.apartment_number || '-'}</td>
+                <td>${contract.contract_code || contract.number || contract.id}</td>
+                <td>${resident?.full_name || resident?.name || '-'}</td>
+                <td>${apartment?.apartment_code || apartment?.number || '-'}</td>
                 <td>${formatDate(contract.start_date)}</td>
                 <td>${formatDate(contract.end_date)}</td>
                 <td>${formatCurrency(contract.monthly_rent || 0)}</td>
                 <td><span class="status-badge status-${contract.status || 'pending'}">${getStatusLabel(contract.status)}</span></td>
                 <td>
-                  <div class="action-btns">
-                    <button class="btn-sm info" onclick="viewContract('${contract.id}')">Xem</button>
-                    ${contract.status === 'pending' ? `<button class="btn-sm success" onclick="approveContract('${contract.id}')">Duyệt</button>` : ''}
-                    ${contract.status === 'active' ? `<button class="btn-sm warning" onclick="extendContract('${contract.id}')">Gia hạn</button>` : ''}
-                    ${contract.status !== 'terminated' ? `<button class="btn-sm danger" onclick="terminateContract('${contract.id}')">Kết thúc</button>` : ''}
-                  </div>
+                  <div class="action-btns">${actionBtns}</div>
                 </td>
               </tr>
               `;
@@ -937,23 +982,23 @@
           return;
         }
 
-        const resident = residents.find((r) => r.id === (contract.resident_id || contract.ResidentID));
-        const apartment = apartments.find((a) => a.id === (contract.apartment_id || contract.ApartmentID));
+        const resident = getResidentInfo(contract);
+        const apartment = getApartmentInfo(contract);
 
         const viewContent = document.getElementById('viewContent');
         viewContent.innerHTML = `
           <div class="detail-view">
             <div class="detail-row">
               <div class="detail-label">Số hợp đồng:</div>
-              <div class="detail-value">${contract.number || contract.id}</div>
+              <div class="detail-value">${contract.contract_code || contract.number || contract.id}</div>
             </div>
             <div class="detail-row">
               <div class="detail-label">Cư dân:</div>
-              <div class="detail-value">${resident?.name || contract.resident_name || '-'}</div>
+              <div class="detail-value">${resident?.full_name || resident?.name || '-'}</div>
             </div>
             <div class="detail-row">
               <div class="detail-label">Căn hộ:</div>
-              <div class="detail-value">${apartment?.number || contract.apartment_number || '-'}</div>
+              <div class="detail-value">${apartment?.apartment_code || apartment?.number || '-'}</div>
             </div>
             <div class="detail-row">
               <div class="detail-label">Ngày bắt đầu:</div>

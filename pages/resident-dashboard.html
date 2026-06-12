@@ -88,16 +88,19 @@
           invoiceAPI.getInvoices(),
           maintenanceAPI.getMaintenanceRequests(),
         ]);
-        if (notifRes.status === 'fulfilled') unread = (notifRes.value.data || []).length;
+        if (notifRes.status === 'fulfilled') {
+          const nv = notifRes.value;
+          unread = nv.unread_count ?? (Array.isArray(nv) ? nv.length : (nv.data || []).length);
+        }
         if (invRes.status === 'fulfilled') {
           pendingInvoices = (invRes.value.data || []).filter(i =>
             ['pending', 'issued', 'overdue'].includes(i.status)
           );
         }
         if (maintRes.status === 'fulfilled') {
-          maintenance = (maintRes.value.data || []).filter(r =>
-            !['completed', 'cancelled'].includes(r.status)
-          );
+          const raw = maintRes.value;
+          const list = Array.isArray(raw) ? raw : (raw.data || []);
+          maintenance = list.filter((r) => !['completed', 'cancelled'].includes(r.status));
         }
       } catch (_) {}
 
@@ -147,13 +150,17 @@
       if (!requests.length) return;
       el.innerHTML = `<div class="table-responsive"><table>
         <thead><tr><th>Mã</th><th>Loại</th><th>Ưu tiên</th><th>Trạng thái</th><th>Ngày tạo</th></tr></thead>
-        <tbody>${requests.map(r => `<tr>
+        <tbody>${requests.map(r => {
+          const pri = { low: 'Thấp', normal: 'TB', urgent: 'Khẩn' }[r.priority] || r.priority;
+          const st = { new: 'Mới', assigned: 'Đã PC', in_progress: 'Đang XL', completed: 'Xong', cancelled: 'Hủy' }[r.status] || r.status;
+          return `<tr>
           <td>${r.request_code || r.id}</td>
           <td>${r.issue_type || '-'}</td>
-          <td><span class="badge badge-red">${r.priority}</span></td>
-          <td><span class="badge badge-blue">${r.status}</span></td>
+          <td><span class="badge badge-red">${pri}</span></td>
+          <td><span class="badge badge-blue">${st}</span></td>
           <td>${formatDate(r.created_at)}</td>
-        </tr>`).join('')}</tbody></table></div>`;
+        </tr>`;
+        }).join('')}</tbody></table></div>`;
     }
 
     loadDashboard();

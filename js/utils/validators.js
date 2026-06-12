@@ -17,7 +17,7 @@ function validateEmail(email) {
  */
 function validatePassword(password) {
   if (!password) return { valid: false, error: 'Password is required' };
-  if (password.length < 6) return { valid: false, error: 'Password must be at least 6 characters' };
+  if (password.length < 8) return { valid: false, error: 'Mật khẩu phải có ít nhất 8 ký tự' };
   return { valid: true };
 }
 

@@ -46,9 +46,10 @@ const CONTRACT_STATUS = {
   EXPIRED: 'expired',
 };
 
-// Invoice Status
+// Invoice Status (backend uses pending; issued/draft map to pending)
 const INVOICE_STATUS = {
   DRAFT: 'draft',
+  PENDING: 'pending',
   ISSUED: 'issued',
   OVERDUE: 'overdue',
   PAID: 'paid',
@@ -70,6 +71,13 @@ const MAINTENANCE_STATUS = {
   IN_PROGRESS: 'in_progress',
   COMPLETED: 'completed',
   CANCELLED: 'cancelled',
+};
+
+// Backend priority values (urgent, normal, low) — UI also uses medium/high
+const MAINTENANCE_PRIORITY_BACKEND = {
+  LOW: 'low',
+  NORMAL: 'normal',
+  URGENT: 'urgent',
 };
 
 // Notification Types
@@ -106,6 +114,7 @@ export {
   CONTRACT_STATUS,
   INVOICE_STATUS,
   MAINTENANCE_PRIORITY,
+  MAINTENANCE_PRIORITY_BACKEND,
   MAINTENANCE_STATUS,
   NOTIFICATION_TYPES,
   STORAGE_KEYS,

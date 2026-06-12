@@ -5,6 +5,28 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Báo cáo Tài chính - Vinhomes</title>
   <link rel="stylesheet" href="../css/admin.css" />
+  <style>
+    .preset-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+    .preset-btns button {
+      background: #eef0ff;
+      color: #667eea;
+      border: 1px solid #c5cae9;
+      padding: 6px 14px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .preset-btns button:hover, .preset-btns button.active {
+      background: #667eea;
+      color: #fff;
+    }
+    .report-meta {
+      color: #666;
+      font-size: 13px;
+      margin-bottom: 16px;
+    }
+    .section + .section { margin-top: 20px; }
+  </style>
 </head>
 <body>
   <div id="navbar-placeholder"></div>
@@ -14,54 +36,276 @@
         <h1 class="page-title">Báo cáo Tài chính</h1>
         <p class="page-subtitle">UC 2.7.39 — Tổng hợp doanh thu & công nợ</p>
       </div>
+      <button class="btn btn-outline" id="exportBtn" style="display:none">📥 Xuất CSV</button>
     </div>
 
     <div class="section" style="padding:20px">
+      <div class="preset-btns" id="presetBtns">
+        <button type="button" data-preset="this_month">Tháng này</button>
+        <button type="button" data-preset="last_month">Tháng trước</button>
+        <button type="button" data-preset="this_quarter">Quý này</button>
+        <button type="button" data-preset="this_year">Năm nay</button>
+      </div>
       <div class="form-row">
         <div class="form-group">
-          <label>Từ ngày</label>
+          <label for="startDate">Từ ngày</label>
           <input type="date" id="startDate" />
         </div>
         <div class="form-group">
-          <label>Đến ngày</label>
+          <label for="endDate">Đến ngày</label>
           <input type="date" id="endDate" />
         </div>
         <div class="form-group">
-          <label>Trạng thái HĐ</label>
+          <label for="statusFilter">Lọc hóa đơn</label>
           <select id="statusFilter">
-            <option value="">Tất cả</option>
+            <option value="">Tất cả trong kỳ</option>
             <option value="pending">Chờ thanh toán</option>
             <option value="paid">Đã thanh toán</option>
             <option value="overdue">Quá hạn</option>
           </select>
         </div>
-        <div class="form-group" style="display:flex;align-items:flex-end">
+        <div class="form-group" style="display:flex;align-items:flex-end;gap:8px">
           <button class="btn btn-primary" id="generateBtn">Tạo báo cáo</button>
         </div>
       </div>
     </div>
 
+    <div id="reportMeta" class="report-meta" style="display:none"></div>
+
     <div class="kpi-grid" id="reportKPI">
-      <div class="empty-state"><p>Chọn khoảng thời gian và nhấn "Tạo báo cáo"</p></div>
+      <div class="empty-state"><p>Chọn khoảng thời gian và nhấn <strong>Tạo báo cáo</strong></p></div>
     </div>
 
-    <div class="section" id="reportDetail" style="display:none">
-      <div class="section-title"><span>Chi tiết tổng hợp</span></div>
-      <div id="reportTable"></div>
+    <div class="section" id="monthlySection" style="display:none">
+      <div class="section-title"><span>Doanh thu theo kỳ thanh toán</span></div>
+      <div id="monthlyTable"></div>
+    </div>
+
+    <div class="section" id="debtSection" style="display:none">
+      <div class="section-title"><span>Danh sách công nợ (hiện tại)</span></div>
+      <div id="debtTable"></div>
+    </div>
+
+    <div class="section" id="invoiceSection" style="display:none">
+      <div class="section-title"><span>Hóa đơn trong kỳ báo cáo</span></div>
+      <div id="invoiceTable"></div>
     </div>
   </div>
 
   <script type="module">
     import { initLayout } from '../js/modules/layout.js';
     import reportsAPI from '../js/api/reports.js';
-    import { formatCurrency, showToast } from '../js/utils/helpers.js';
+    import { formatCurrency, formatDate, showToast } from '../js/utils/helpers.js';
 
     await initLayout({ requiredRoles: ['admin', 'manager'] });
 
+    let lastReportData = null;
+
+    function setDateRange(start, end) {
+      document.getElementById('startDate').value = start.toISOString().slice(0, 10);
+      document.getElementById('endDate').value = end.toISOString().slice(0, 10);
+    }
+
+    function applyPreset(preset) {
+      const today = new Date();
+      const y = today.getFullYear();
+      const m = today.getMonth();
+      let start, end;
+
+      switch (preset) {
+        case 'this_month':
+          start = new Date(y, m, 1);
+          end = today;
+          break;
+        case 'last_month':
+          start = new Date(y, m - 1, 1);
+          end = new Date(y, m, 0);
+          break;
+        case 'this_quarter': {
+          const q = Math.floor(m / 3) * 3;
+          start = new Date(y, q, 1);
+          end = today;
+          break;
+        }
+        case 'this_year':
+          start = new Date(y, 0, 1);
+          end = today;
+          break;
+        default:
+          return;
+      }
+      setDateRange(start, end);
+      document.querySelectorAll('#presetBtns button').forEach((b) => {
+        b.classList.toggle('active', b.dataset.preset === preset);
+      });
+    }
+
     const today = new Date();
-    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-    document.getElementById('startDate').value = firstDay.toISOString().slice(0, 10);
-    document.getElementById('endDate').value = today.toISOString().slice(0, 10);
+    setDateRange(new Date(today.getFullYear(), today.getMonth(), 1), today);
+    document.querySelector('[data-preset="this_month"]')?.classList.add('active');
+
+    document.getElementById('presetBtns').addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-preset]');
+      if (!btn) return;
+      applyPreset(btn.dataset.preset);
+    });
+
+    function renderSummary(s, period) {
+      document.getElementById('reportKPI').innerHTML = `
+        <div class="kpi-card blue">
+          <div class="kpi-label">Hóa đơn phát hành</div>
+          <div class="kpi-value">${s.total_invoices || 0}</div>
+          <div class="kpi-sub">Trong kỳ báo cáo</div>
+        </div>
+        <div class="kpi-card green">
+          <div class="kpi-label">Tổng phát hành</div>
+          <div class="kpi-value" style="font-size:18px">${formatCurrency(s.total_amount || 0)}</div>
+        </div>
+        <div class="kpi-card green">
+          <div class="kpi-label">Đã thu</div>
+          <div class="kpi-value" style="font-size:18px">${formatCurrency(s.total_paid || 0)}</div>
+          <div class="kpi-sub">Tỷ lệ thu: ${(s.collection_rate || 0).toFixed(1)}%</div>
+        </div>
+        <div class="kpi-card orange">
+          <div class="kpi-label">Còn nợ (trong kỳ)</div>
+          <div class="kpi-value" style="font-size:18px">${formatCurrency(s.total_outstanding || 0)}</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Doanh thu thuê dự kiến</div>
+          <div class="kpi-value" style="font-size:18px">${formatCurrency(s.expected_rent_revenue || 0)}</div>
+          <div class="kpi-sub">Từ HĐ active trong kỳ</div>
+        </div>
+        <div class="kpi-card red">
+          <div class="kpi-label">Công nợ hiện tại</div>
+          <div class="kpi-value" style="font-size:18px">${formatCurrency(s.total_debt_amount || 0)}</div>
+          <div class="kpi-sub">${s.total_debtors || 0} cư dân nợ</div>
+        </div>
+        <div class="kpi-card red">
+          <div class="kpi-label">Hóa đơn quá hạn</div>
+          <div class="kpi-value">${s.overdue_count || 0}</div>
+          <div class="kpi-sub">Chờ: ${s.pending_count || 0} · Đã TT: ${s.paid_count || 0}</div>
+        </div>
+      `;
+
+      if (period?.start_date && period?.end_date) {
+        const meta = document.getElementById('reportMeta');
+        meta.style.display = 'block';
+        meta.textContent = `Kỳ báo cáo: ${formatDate(period.start_date)} — ${formatDate(period.end_date)}`;
+      }
+    }
+
+    function renderMonthly(rows) {
+      const el = document.getElementById('monthlyTable');
+      const section = document.getElementById('monthlySection');
+      if (!rows?.length) {
+        section.style.display = 'none';
+        return;
+      }
+      section.style.display = 'block';
+      el.innerHTML = `<div class="table-responsive"><table>
+        <thead><tr>
+          <th>Kỳ TT</th><th>Số HĐ</th><th>Phát hành</th><th>Đã thu</th><th>Còn nợ</th>
+        </tr></thead>
+        <tbody>${rows.map((r) => `<tr>
+          <td><strong>${r.billing_period}</strong></td>
+          <td>${r.invoice_count}</td>
+          <td>${formatCurrency(r.issued)}</td>
+          <td>${formatCurrency(r.collected)}</td>
+          <td>${formatCurrency(r.outstanding)}</td>
+        </tr>`).join('')}</tbody>
+      </table></div>`;
+    }
+
+    function renderDebtors(debtors) {
+      const el = document.getElementById('debtTable');
+      const section = document.getElementById('debtSection');
+      section.style.display = 'block';
+      if (!debtors?.length) {
+        el.innerHTML = `<div class="empty-state"><div class="empty-state-icon">✓</div><p>Không có công nợ</p></div>`;
+        return;
+      }
+      el.innerHTML = `<div class="table-responsive"><table>
+        <thead><tr>
+          <th>Cư dân</th><th>Căn hộ</th><th>Số HĐ nợ</th><th>Quá hạn</th><th>Tổng nợ</th><th>Hạn gần nhất</th>
+        </tr></thead>
+        <tbody>${debtors.map((d) => `<tr>
+          <td>${d.resident_name || '-'}</td>
+          <td>${d.apartment_code || '-'}</td>
+          <td>${d.invoice_count || 0}</td>
+          <td><span class="badge badge-red">${d.overdue_count || 0}</span></td>
+          <td><strong>${formatCurrency(d.outstanding_amount)}</strong></td>
+          <td>${d.latest_due_date ? formatDate(d.latest_due_date) : '-'}</td>
+        </tr>`).join('')}</tbody>
+      </table></div>`;
+    }
+
+    function statusBadge(status) {
+      const map = {
+        paid: ['badge-green', 'Đã TT'],
+        pending: ['badge-orange', 'Chờ TT'],
+        overdue: ['badge-red', 'Quá hạn'],
+      };
+      const [cls, label] = map[status] || ['badge-gray', status];
+      return `<span class="badge ${cls}">${label}</span>`;
+    }
+
+    function renderInvoices(invoices) {
+      const el = document.getElementById('invoiceTable');
+      const section = document.getElementById('invoiceSection');
+      section.style.display = 'block';
+      if (!invoices?.length) {
+        el.innerHTML = `<div class="empty-state"><p>Không có hóa đơn trong kỳ</p></div>`;
+        return;
+      }
+      el.innerHTML = `<div class="table-responsive"><table>
+        <thead><tr>
+          <th>Mã HĐ</th><th>Kỳ</th><th>Căn hộ</th><th>Cư dân</th>
+          <th>Phát hành</th><th>Đã thu</th><th>Trạng thái</th><th>Hạn TT</th>
+        </tr></thead>
+        <tbody>${invoices.map((i) => `<tr>
+          <td>${i.invoice_code || i.id}</td>
+          <td>${i.billing_period || '-'}</td>
+          <td>${i.apartment_code || '-'}</td>
+          <td>${i.resident_name || '-'}</td>
+          <td>${formatCurrency(i.total_amount)}</td>
+          <td>${formatCurrency(i.paid_amount)}</td>
+          <td>${statusBadge(i.status)}</td>
+          <td>${formatDate(i.due_date)}</td>
+        </tr>`).join('')}</tbody>
+      </table></div>
+      <p style="color:#999;font-size:12px;margin-top:8px">Hiển thị tối đa 100 hóa đơn mới nhất trong kỳ.</p>`;
+    }
+
+    function exportCSV() {
+      if (!lastReportData) return;
+      const { summary: s, debtors, monthly_breakdown: monthly, invoices } = lastReportData;
+      const lines = [
+        'BÁO CÁO TÀI CHÍNH - Vinhomes West Point',
+        `Tổng phát hành,${s.total_amount}`,
+        `Đã thu,${s.total_paid}`,
+        `Còn nợ kỳ,${s.total_outstanding}`,
+        `Công nợ hiện tại,${s.total_debt_amount}`,
+        '',
+        'CÔNG NỢ THEO CƯ DÂN',
+        'Cư dân,Căn hộ,Số HĐ nợ,Quá hạn,Tổng nợ',
+        ...(debtors || []).map((d) =>
+          `"${d.resident_name}","${d.apartment_code || ''}",${d.invoice_count},${d.overdue_count},${d.outstanding_amount}`
+        ),
+        '',
+        'THEO KỲ',
+        'Kỳ,Số HĐ,Phát hành,Đã thu,Còn nợ',
+        ...(monthly || []).map((m) =>
+          `${m.billing_period},${m.invoice_count},${m.issued},${m.collected},${m.outstanding}`
+        ),
+      ];
+      const blob = new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `bao-cao-tai-chinh-${document.getElementById('startDate').value}.csv`;
+      a.click();
+    }
+
+    document.getElementById('exportBtn').addEventListener('click', exportCSV);
 
     document.getElementById('generateBtn').addEventListener('click', async () => {
       const start = document.getElementById('startDate').value;
@@ -71,60 +315,47 @@
         showToast('Vui lòng chọn khoảng thời gian', 'error');
         return;
       }
+      if (new Date(end) < new Date(start)) {
+        showToast('Ngày kết thúc phải sau ngày bắt đầu', 'error');
+        return;
+      }
+
+      const btn = document.getElementById('generateBtn');
       try {
-        document.getElementById('generateBtn').disabled = true;
+        btn.disabled = true;
+        btn.textContent = 'Đang tạo...';
+        document.getElementById('reportKPI').innerHTML =
+          '<div class="loading"><div class="spinner"></div><p>Đang tổng hợp dữ liệu...</p></div>';
+
         const res = await reportsAPI.getFinancialReport({
           start_date: start,
           end_date: end,
           status: status || undefined,
         });
-        const r = res.data || res;
-        document.getElementById('reportKPI').innerHTML = `
-          <div class="kpi-card blue">
-            <div class="kpi-label">Tổng hóa đơn</div>
-            <div class="kpi-value">${r.total_invoices || 0}</div>
-          </div>
-          <div class="kpi-card green">
-            <div class="kpi-label">Tổng phát hành</div>
-            <div class="kpi-value" style="font-size:18px">${formatCurrency(r.total_amount || 0)}</div>
-          </div>
-          <div class="kpi-card green">
-            <div class="kpi-label">Đã thu</div>
-            <div class="kpi-value" style="font-size:18px">${formatCurrency(r.total_paid || 0)}</div>
-          </div>
-          <div class="kpi-card orange">
-            <div class="kpi-label">Còn nợ</div>
-            <div class="kpi-value" style="font-size:18px">${formatCurrency(r.total_outstanding || 0)}</div>
-          </div>
-          <div class="kpi-card">
-            <div class="kpi-label">Tỷ lệ thu</div>
-            <div class="kpi-value">${(r.collection_rate || 0).toFixed(1)}%</div>
-          </div>
-          <div class="kpi-card red">
-            <div class="kpi-label">Quá hạn</div>
-            <div class="kpi-value">${r.overdue_count || 0}</div>
-          </div>
-        `;
 
-        document.getElementById('reportDetail').style.display = 'block';
-        document.getElementById('reportTable').innerHTML = `<div class="table-responsive"><table>
-          <thead><tr><th>Chỉ tiêu</th><th>Giá trị</th></tr></thead>
-          <tbody>
-            <tr><td>Hóa đơn đã thanh toán</td><td>${r.paid_count || 0}</td></tr>
-            <tr><td>Hóa đơn chờ thanh toán</td><td>${r.pending_count || 0}</td></tr>
-            <tr><td>Hóa đơn quá hạn</td><td>${r.overdue_count || 0}</td></tr>
-            <tr><td>Tổng doanh thu phát hành</td><td>${formatCurrency(r.total_amount || 0)}</td></tr>
-            <tr><td>Tổng đã thu</td><td>${formatCurrency(r.total_paid || 0)}</td></tr>
-            <tr><td>Công nợ còn lại</td><td>${formatCurrency(r.total_outstanding || 0)}</td></tr>
-            <tr><td>Tỷ lệ thu hồi</td><td>${(r.collection_rate || 0).toFixed(2)}%</td></tr>
-          </tbody>
-        </table></div>`;
+        const data = res.data || res;
+        lastReportData = data;
+        const s = data.summary || data;
+
+        renderSummary(s, data.period);
+        renderMonthly(data.monthly_breakdown);
+        renderDebtors(data.debtors);
+        renderInvoices(data.invoices);
+
+        document.getElementById('exportBtn').style.display = 'inline-block';
+        showToast('Báo cáo đã được tạo', 'success');
       } catch (err) {
+        document.getElementById('reportKPI').innerHTML =
+          `<div class="alert alert-error">Lỗi: ${err.message}</div>`;
         showToast(err.message, 'error');
       } finally {
-        document.getElementById('generateBtn').disabled = false;
+        btn.disabled = false;
+        btn.textContent = 'Tạo báo cáo';
       }
     });
+
+    // Tự tải báo cáo tháng này khi mở trang
+    document.getElementById('generateBtn').click();
   </script>
 </body>
 </html>

@@ -275,7 +275,8 @@
       color: #1976d2;
     }
 
-    .status-issued {
+    .status-issued,
+    .status-pending {
       background: #f3e5f5;
       color: #7b1fa2;
     }
@@ -672,6 +673,7 @@
       <select id="statusFilter" class="filter-select">
         <option value="">Tất cả trạng thái</option>
         <option value="draft">Nháp</option>
+        <option value="pending">Chờ thanh toán</option>
         <option value="issued">Đã phát hành</option>
         <option value="overdue">Quá hạn</option>
         <option value="paid">Đã thanh toán</option>
@@ -718,13 +720,22 @@
 
         <div class="form-row">
           <div class="form-group required">
-            <label for="invoiceDate">Ngày tạo</label>
+            <label for="invoiceDate">Ngày tạo / Kỳ TT</label>
             <input type="date" id="invoiceDate" name="invoiceDate" required />
           </div>
           <div class="form-group required">
             <label for="dueDate">Hạn thanh toán</label>
             <input type="date" id="dueDate" name="dueDate" required />
           </div>
+        </div>
+
+        <div class="form-group" id="invoiceStatusGroup" style="display:none">
+          <label for="invoiceStatus">Trạng thái</label>
+          <select id="invoiceStatus">
+            <option value="pending">Chờ thanh toán</option>
+            <option value="overdue">Quá hạn</option>
+            <option value="cancelled">Hủy bỏ</option>
+          </select>
         </div>
 
         <div class="form-group">
@@ -758,6 +769,21 @@
           <button type="submit" class="btn-primary">Lưu hóa đơn</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- View Invoice Modal -->
+  <div class="modal" id="viewModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Chi tiết hóa đơn</h2>
+        <button class="close-btn" id="closeViewBtn">&times;</button>
+      </div>
+      <div id="viewDetails"></div>
+      <div class="form-buttons">
+        <button type="button" class="btn-cancel" id="closeViewDetailsBtn">Đóng</button>
+        <button type="button" class="btn-primary" id="viewEditBtn" style="display:none">Sửa hóa đơn</button>
+      </div>
     </div>
   </div>
 
@@ -828,6 +854,7 @@
     import invoiceAPI from '../js/api/invoices.js';
     import residentAPI from '../js/api/residents.js';
     import buildingAPI from '../js/api/buildings.js';
+    import contractAPI from '../js/api/contracts.js';
     import { formatDate, formatCurrency, showToast, debounce } from '../js/utils/helpers.js';
     import { INVOICE_STATUS, ROLES } from '../js/utils/constants.js';
 
@@ -837,9 +864,13 @@
     let allInvoices = [];
     let allResidents = [];
     let allApartments = [];
+    let allContracts = [];
     let filteredInvoices = [];
     let editingInvoiceId = null;
-    let lineItemsData = [];
+    let viewingInvoiceId = null;
+    let lineItemIdCounter = 0;
+    const canManage = () => [ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF].includes(currentRole);
+    const canEditInvoice = () => [ROLES.ADMIN, ROLES.MANAGER].includes(currentRole);
 
     // Initialize
     async function init() {
@@ -848,8 +879,12 @@
         currentUser = authManager.getCurrentUser();
         currentRole = authManager.getUserRole();
 
+        if (!canManage()) {
+          document.getElementById('addInvoiceBtn').style.display = 'none';
+        }
+
         // Load data
-        await Promise.all([loadInvoices(), loadResidents(), loadApartments()]);
+        await Promise.all([loadInvoices(), loadResidents(), loadApartments(), loadContracts()]);
 
         // Setup event listeners
         setupEventListeners();
@@ -879,6 +914,17 @@
       document.getElementById('paymentModal').addEventListener('click', (e) => {
         if (e.target === document.getElementById('paymentModal')) closePaymentModal();
       });
+      document.getElementById('viewModal').addEventListener('click', (e) => {
+        if (e.target === document.getElementById('viewModal')) closeViewModal();
+      });
+      document.getElementById('closeViewBtn').addEventListener('click', closeViewModal);
+      document.getElementById('closeViewDetailsBtn').addEventListener('click', closeViewModal);
+      document.getElementById('viewEditBtn').addEventListener('click', () => {
+        if (viewingInvoiceId) {
+          closeViewModal();
+          openEditInvoiceModal(viewingInvoiceId);
+        }
+      });
 
       // Search and filter
       document.getElementById('searchInput').addEventListener(
@@ -888,17 +934,15 @@
       document.getElementById('statusFilter').addEventListener('change', filterInvoices);
 
       // Invoice form
-      document.getElementById('invoiceForm').addEventListener('submit', handleCreateInvoice);
-      document.getElementById('addLineItemBtn').addEventListener('click', addLineItem);
+      document.getElementById('invoiceForm').addEventListener('submit', handleSaveInvoice);
+      document.getElementById('addLineItemBtn').addEventListener('click', () => addLineItem());
       document.getElementById('resident').addEventListener('change', onResidentChange);
+      document.getElementById('apartment').addEventListener('change', onApartmentChange);
       document.getElementById('invoiceDate').addEventListener('change', updateLineItemTotals);
 
       // Payment form
       document.getElementById('paymentForm').addEventListener('submit', handleRecordPayment);
       document.getElementById('paymentPaid').addEventListener('change', updatePaymentStatus);
-
-      // Initialize with first line item
-      resetInvoiceForm();
     }
 
     async function loadInvoices() {
@@ -918,7 +962,6 @@
         const response = await residentAPI.getResidents();
         // Handle both array and object responses
         allResidents = Array.isArray(response) ? response : (response.data || response.residents || []);
-        populateResidentDropdown();
       } catch (error) {
         console.error('Error loading residents:', error);
         showToast(`Lỗi tải cư dân: ${error.message}`, 'error');
@@ -936,41 +979,109 @@
       }
     }
 
+    async function loadContracts() {
+      try {
+        const response = await contractAPI.getContracts();
+        allContracts = Array.isArray(response) ? response : (response.data || []);
+      } catch (error) {
+        console.error('Error loading contracts:', error);
+      }
+    }
+
+    function normId(id) {
+      return String(id || '').trim();
+    }
+
     function populateResidentDropdown() {
       const select = document.getElementById('resident');
       select.innerHTML = '<option value="">-- Chọn cư dân --</option>';
-      allResidents.forEach((resident) => {
-        const option = document.createElement('option');
-        option.value = resident.id;
-        option.textContent = resident.name;
-        select.appendChild(option);
-      });
+      // Chỉ hiện cư dân có HĐ active/extended
+      const residentIds = new Set(
+        allContracts
+          .filter((c) => ['active', 'extended'].includes(c.status))
+          .map((c) => normId(c.resident_id))
+      );
+      allResidents
+        .filter((r) => residentIds.has(normId(r.id)))
+        .forEach((resident) => {
+          const option = document.createElement('option');
+          option.value = resident.id;
+          option.textContent = resident.full_name || resident.name || resident.email || resident.id;
+          select.appendChild(option);
+        });
+      if (select.options.length === 1) {
+        const hint = document.createElement('option');
+        hint.disabled = true;
+        hint.textContent = '— Chưa có cư dân có HĐ active —';
+        select.appendChild(hint);
+      }
     }
 
-    function populateApartmentDropdown(residentsResidenceApartments = []) {
+    function populateApartmentDropdown(apartmentIds = null) {
       const select = document.getElementById('apartment');
       select.innerHTML = '<option value="">-- Chọn căn hộ --</option>';
 
-      let apartments = residentsResidenceApartments.length > 0 ? residentsResidenceApartments : allApartments;
+      let list = allApartments;
+      if (apartmentIds && apartmentIds.length > 0) {
+        const idSet = new Set(apartmentIds.map(normId));
+        list = allApartments.filter((a) => idSet.has(normId(a.id)));
+      }
 
-      apartments.forEach((apt) => {
+      list.forEach((apt) => {
         const option = document.createElement('option');
         option.value = apt.id;
-        option.textContent = apt.apartment_number || apt.name || apt.id;
+        const code = apt.apartment_code || apt.number || apt.id;
+        option.textContent = code;
+        option.dataset.code = code;
         select.appendChild(option);
       });
+
+      if (list.length === 0) {
+        const hint = document.createElement('option');
+        hint.disabled = true;
+        hint.textContent = '— Không có căn hộ —';
+        select.appendChild(hint);
+      }
     }
 
     function onResidentChange() {
       const residentId = document.getElementById('resident').value;
       if (!residentId) {
-        populateApartmentDropdown([]);
+        populateApartmentDropdown(null);
         return;
       }
+      const aptIds = allContracts
+        .filter(
+          (c) =>
+            normId(c.resident_id) === normId(residentId) &&
+            ['active', 'extended'].includes(c.status)
+        )
+        .map((c) => c.apartment_id);
+      populateApartmentDropdown(aptIds);
+    }
 
-      const resident = allResidents.find((r) => r.id === residentId);
-      const residenceApartments = resident && resident.residences ? resident.residences : [];
-      populateApartmentDropdown(residenceApartments);
+    function onApartmentChange() {
+      const residentId = document.getElementById('resident').value;
+      const apartmentId = document.getElementById('apartment').value;
+      if (!residentId || !apartmentId) return;
+
+      const contract = allContracts.find(
+        (c) =>
+          normId(c.resident_id) === normId(residentId) &&
+          normId(c.apartment_id) === normId(apartmentId) &&
+          ['active', 'extended'].includes(c.status)
+      );
+      if (!contract) return;
+
+      const container = document.getElementById('lineItemsContainer');
+      const firstItem = container.querySelector('.line-item');
+      if (firstItem && contract.monthly_rent != null) {
+        const desc = firstItem.querySelector('.item-description');
+        const price = firstItem.querySelector('.item-price');
+        if (desc && !desc.value.trim()) desc.value = 'Tiền thuê căn hộ';
+        if (price) price.value = contract.monthly_rent;
+        updateLineItemTotals();
+      }
     }
 
     function renderInvoices(invoices) {
@@ -1006,33 +1117,28 @@
           <tbody>
             ${invoices
               .map((invoice) => {
-                const isOverdue =
-                  invoice.status !== INVOICE_STATUS.PAID &&
-                  invoice.status !== INVOICE_STATUS.CANCELLED &&
-                  new Date(invoice.due_date) < overdue;
+                const displayStatus = normalizeInvoiceStatus(invoice.status, invoice.due_date);
+                const isOverdue = displayStatus === INVOICE_STATUS.OVERDUE;
+                const canEdit = canEditInvoice() && displayStatus !== INVOICE_STATUS.PAID && displayStatus !== INVOICE_STATUS.CANCELLED;
+                const canPay = canManage() && displayStatus !== INVOICE_STATUS.PAID && displayStatus !== INVOICE_STATUS.CANCELLED;
                 return `
               <tr ${isOverdue ? 'class="overdue"' : ''}>
-                <td><strong>${invoice.invoice_number}</strong></td>
-                <td>${invoice.resident_name}</td>
-                <td>${invoice.apartment_number}</td>
+                <td><strong>${invoice.invoice_code || invoice.invoice_number || invoice.id}</strong></td>
+                <td>${invoice.resident_name || '-'}</td>
+                <td>${invoice.apartment_code || invoice.apartment_number || '-'}</td>
                 <td>${formatCurrency(invoice.total_amount)}</td>
                 <td>${formatDate(invoice.due_date)}</td>
                 <td>
-                  <span class="status-badge status-${invoice.status}">
-                    ${getStatusLabel(invoice.status)}
+                  <span class="status-badge status-${displayStatus}">
+                    ${getStatusLabel(displayStatus)}
                   </span>
                 </td>
-                <td>${invoice.payment_date ? formatDate(invoice.payment_date) : '-'}</td>
+                <td>${invoice.paid_amount > 0 ? formatDate(invoice.updated_at || invoice.created_at) : '-'}</td>
                 <td>
                   <div class="action-btns">
                     <button class="btn-sm" onclick="window.invoiceApp.viewInvoice('${invoice.id}')">Xem</button>
-                    ${invoice.status !== INVOICE_STATUS.PAID && invoice.status !== INVOICE_STATUS.CANCELLED ? `
-                      <button class="btn-sm" onclick="window.invoiceApp.editInvoice('${invoice.id}')">Sửa</button>
-                      <button class="btn-sm success" onclick="window.invoiceApp.openPaymentModal('${invoice.id}')">Thanh toán</button>
-                    ` : ''}
-                    ${[INVOICE_STATUS.DRAFT, INVOICE_STATUS.ISSUED].includes(invoice.status) ? `
-                      <button class="btn-sm danger" onclick="window.invoiceApp.deleteInvoice('${invoice.id}')">Xóa</button>
-                    ` : ''}
+                    ${canEdit ? `<button class="btn-sm" onclick="window.invoiceApp.editInvoice('${invoice.id}')">Sửa</button>` : ''}
+                    ${canPay ? `<button class="btn-sm success" onclick="window.invoiceApp.openPaymentModal('${invoice.id}')">Thanh toán</button>` : ''}
                   </div>
                 </td>
               </tr>
@@ -1044,9 +1150,20 @@
       `;
     }
 
+    function normalizeInvoiceStatus(status, dueDate) {
+      const s = status === 'issued' || status === 'draft' ? INVOICE_STATUS.PENDING : status;
+      if (s === INVOICE_STATUS.PENDING && dueDate) {
+        const overdue = new Date();
+        overdue.setDate(overdue.getDate() - 1);
+        if (new Date(dueDate) < overdue) return INVOICE_STATUS.OVERDUE;
+      }
+      return s;
+    }
+
     function getStatusLabel(status) {
       const labels = {
         [INVOICE_STATUS.DRAFT]: 'Nháp',
+        [INVOICE_STATUS.PENDING]: 'Chờ thanh toán',
         [INVOICE_STATUS.ISSUED]: 'Đã phát hành',
         [INVOICE_STATUS.OVERDUE]: 'Quá hạn',
         [INVOICE_STATUS.PAID]: 'Đã thanh toán',
@@ -1061,9 +1178,11 @@
 
       filteredInvoices = allInvoices.filter((invoice) => {
         const matchesSearch =
-          invoice.invoice_number.toLowerCase().includes(searchTerm) ||
-          invoice.resident_name.toLowerCase().includes(searchTerm);
-        const matchesStatus = !statusFilter || invoice.status === statusFilter;
+          (invoice.invoice_code || invoice.invoice_number || '').toLowerCase().includes(searchTerm) ||
+          (invoice.resident_name || '').toLowerCase().includes(searchTerm);
+        const displayStatus = normalizeInvoiceStatus(invoice.status, invoice.due_date);
+        const effectiveFilter = statusFilter === 'issued' ? INVOICE_STATUS.PENDING : statusFilter;
+        const matchesStatus = !statusFilter || displayStatus === effectiveFilter;
 
         return matchesSearch && matchesStatus;
       });
@@ -1087,11 +1206,8 @@
           paidAmount += invoice.total_amount;
         }
 
-        if (
-          invoice.status !== INVOICE_STATUS.PAID &&
-          invoice.status !== INVOICE_STATUS.CANCELLED &&
-          new Date(invoice.due_date) < overdue
-        ) {
+        const displayStatus = normalizeInvoiceStatus(invoice.status, invoice.due_date);
+        if (displayStatus === INVOICE_STATUS.OVERDUE) {
           overdueAmount += invoice.total_amount;
           overdueCount++;
         }
@@ -1104,56 +1220,179 @@
       window.dispatchEvent(new CustomEvent('kpiNeedsRefresh'));
     }
 
+    function setFormFieldsDisabled(disabled) {
+      ['resident', 'apartment'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.disabled = disabled;
+      });
+      document.getElementById('invoiceStatusGroup').style.display =
+        editingInvoiceId && canEditInvoice() ? 'block' : 'none';
+    }
+
     function openAddInvoiceModal() {
       editingInvoiceId = null;
       document.getElementById('invoiceModalTitle').textContent = 'Tạo hóa đơn';
-      resetInvoiceForm();
+      document.querySelector('#invoiceForm button[type="submit"]').textContent = 'Lưu hóa đơn';
+      resetInvoiceForm(true);
+      populateResidentDropdown();
+      populateApartmentDropdown(null);
+      setFormFieldsDisabled(false);
       document.getElementById('invoiceModal').classList.add('show');
+    }
+
+    async function openEditInvoiceModal(invoiceId) {
+      if (!canEditInvoice()) return;
+      try {
+        const res = await invoiceAPI.getInvoiceByID(invoiceId);
+        const inv = res.data || res;
+        editingInvoiceId = invoiceId;
+        document.getElementById('invoiceModalTitle').textContent = 'Sửa hóa đơn';
+        document.querySelector('#invoiceForm button[type="submit"]').textContent = 'Cập nhật';
+
+        resetInvoiceForm(false);
+        populateResidentDropdown();
+        populateApartmentDropdown(null);
+
+        document.getElementById('resident').value = inv.resident_id || '';
+        onResidentChange();
+        document.getElementById('apartment').value = inv.apartment_id || '';
+        const periodDate = inv.billing_period?.length === 7
+          ? `${inv.billing_period}-01`
+          : (inv.created_at ? new Date(inv.created_at).toISOString().slice(0, 10) : '');
+        document.getElementById('invoiceDate').value = periodDate;
+        document.getElementById('dueDate').value = inv.due_date ? new Date(inv.due_date).toISOString().slice(0, 10) : '';
+        document.getElementById('invoiceDescription').value = inv.description || '';
+        document.getElementById('invoiceStatus').value =
+          inv.status === 'issued' || inv.status === 'draft' ? 'pending' : inv.status;
+
+        clearLineItems();
+        (inv.line_items || []).forEach((item) => {
+          addLineItem(item.description || '', item.quantity || 1, item.price || 0);
+        });
+        if (!(inv.line_items || []).length) {
+          addLineItem('Tiền thuê căn hộ', 1, inv.total_amount || 0);
+        }
+        updateLineItemTotals();
+        setFormFieldsDisabled(true);
+        document.getElementById('invoiceModal').classList.add('show');
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
     }
 
     function closeInvoiceModal() {
       document.getElementById('invoiceModal').classList.remove('show');
-      resetInvoiceForm();
+      editingInvoiceId = null;
+      clearLineItems();
+      document.getElementById('invoiceForm').reset();
+      document.getElementById('invoiceFormError').classList.remove('show');
+      setFormFieldsDisabled(false);
     }
 
-    function resetInvoiceForm() {
-      document.getElementById('invoiceForm').reset();
-      lineItemsData = [];
-      document.getElementById('invoiceDate').valueAsDate = new Date();
+    function closeViewModal() {
+      document.getElementById('viewModal').classList.remove('show');
+      viewingInvoiceId = null;
+    }
 
+    async function viewInvoice(invoiceId) {
+      try {
+        const res = await invoiceAPI.getInvoiceByID(invoiceId);
+        const inv = res.data || res;
+        viewingInvoiceId = invoiceId;
+        const st = normalizeInvoiceStatus(inv.status, inv.due_date);
+        const outstanding = inv.outstanding_amount ?? (inv.total_amount - (inv.paid_amount || 0));
+
+        let lineItemsHtml = '';
+        if (inv.line_items?.length) {
+          lineItemsHtml = `<div style="margin-top:12px"><strong style="font-size:12px;color:#666;text-transform:uppercase">Hạng mục</strong>
+            <table style="width:100%;margin-top:8px;font-size:13px;border-collapse:collapse">
+              <thead><tr style="background:#f5f5f5"><th style="padding:8px;text-align:left">Mô tả</th><th>SL</th><th>Đơn giá</th><th>Thành tiền</th></tr></thead>
+              <tbody>${inv.line_items.map((i) => `<tr>
+                <td style="padding:8px;border-bottom:1px solid #eee">${i.description}</td>
+                <td style="padding:8px;border-bottom:1px solid #eee">${i.quantity}</td>
+                <td style="padding:8px;border-bottom:1px solid #eee">${formatCurrency(i.price)}</td>
+                <td style="padding:8px;border-bottom:1px solid #eee">${formatCurrency(i.total || i.quantity * i.price)}</td>
+              </tr>`).join('')}</tbody></table></div>`;
+        }
+
+        let paymentsHtml = '';
+        if (inv.payments?.length) {
+          paymentsHtml = `<div style="margin-top:12px"><strong style="font-size:12px;color:#666;text-transform:uppercase">Lịch sử thanh toán</strong>
+            <ul style="margin-top:8px;padding-left:18px;font-size:13px;color:#555">
+              ${inv.payments.map((p) => `<li>${formatDate(p.paid_at, 'dd/mm/yyyy hh:mm')} — ${formatCurrency(p.amount)} (${p.method}) ${p.reference ? '· ' + p.reference : ''}</li>`).join('')}
+            </ul></div>`;
+        }
+
+        document.getElementById('viewDetails').innerHTML = `
+          <div style="line-height:1.8">
+            <div style="margin-bottom:12px"><strong style="color:#667eea;font-size:16px">${inv.invoice_code || inv.invoice_number}</strong></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+              <div><span style="color:#666;font-size:12px;text-transform:uppercase">Cư dân</span><br/>${inv.resident_name || '-'}</div>
+              <div><span style="color:#666;font-size:12px;text-transform:uppercase">Căn hộ</span><br/>${inv.apartment_code || '-'}</div>
+              <div><span style="color:#666;font-size:12px;text-transform:uppercase">Kỳ thanh toán</span><br/>${inv.billing_period || '-'}</div>
+              <div><span style="color:#666;font-size:12px;text-transform:uppercase">Trạng thái</span><br/>
+                <span class="status-badge status-${st}">${getStatusLabel(st)}</span></div>
+              <div><span style="color:#666;font-size:12px;text-transform:uppercase">Hạn TT</span><br/>${formatDate(inv.due_date)}</div>
+              <div><span style="color:#666;font-size:12px;text-transform:uppercase">Ngày tạo</span><br/>${formatDate(inv.created_at, 'dd/mm/yyyy hh:mm')}</div>
+              <div><span style="color:#666;font-size:12px;text-transform:uppercase">Tổng phát hành</span><br/><strong>${formatCurrency(inv.total_amount)}</strong></div>
+              <div><span style="color:#666;font-size:12px;text-transform:uppercase">Đã thu</span><br/>${formatCurrency(inv.paid_amount || 0)}</div>
+              <div><span style="color:#666;font-size:12px;text-transform:uppercase">Còn nợ</span><br/><strong style="color:#c62828">${formatCurrency(outstanding)}</strong></div>
+            </div>
+            ${inv.description ? `<div style="margin-bottom:12px"><span style="color:#666;font-size:12px;text-transform:uppercase">Ghi chú</span><br/>${inv.description}</div>` : ''}
+            ${lineItemsHtml}
+            ${paymentsHtml}
+          </div>`;
+
+        const editBtn = document.getElementById('viewEditBtn');
+        const canEdit = canEditInvoice() && st !== INVOICE_STATUS.PAID && st !== INVOICE_STATUS.CANCELLED;
+        editBtn.style.display = canEdit ? 'inline-block' : 'none';
+
+        document.getElementById('viewModal').classList.add('show');
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    }
+
+    function clearLineItems() {
+      document.getElementById('lineItemsContainer').innerHTML = '';
+      lineItemIdCounter = 0;
+    }
+
+    function resetInvoiceForm(addDefaultItem = true) {
+      document.getElementById('invoiceForm').reset();
+      clearLineItems();
+      document.getElementById('invoiceDate').valueAsDate = new Date();
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 7);
       document.getElementById('dueDate').valueAsDate = tomorrow;
-
-      // Add first line item
-      addLineItem();
       document.getElementById('invoiceFormError').classList.remove('show');
+      document.getElementById('invoiceTotalDisplay').textContent = formatCurrency(0);
+      if (addDefaultItem) {
+        addLineItem('Tiền thuê căn hộ', 1, 0);
+      }
     }
 
-    function addLineItem() {
+    function addLineItem(defaultDesc = '', defaultQty = 1, defaultPrice = 0) {
       const container = document.getElementById('lineItemsContainer');
-      const itemId = Date.now();
+      const itemId = ++lineItemIdCounter;
 
       const lineItem = document.createElement('div');
       lineItem.className = 'line-item';
       lineItem.id = `line-item-${itemId}`;
       lineItem.innerHTML = `
-        <input type="text" placeholder="Mô tả hạng mục" class="item-description" value="${
-          lineItemsData.length === 0 ? 'Tiền thuê căn hộ' : ''
-        }" />
-        <input type="number" placeholder="Số lượng" class="item-quantity" value="1" min="1" />
-        <input type="number" placeholder="Đơn giá" class="item-price" value="0" min="0" step="1000" />
-        <button type="button" class="line-item-remove" onclick="window.invoiceApp.removeLineItem('${itemId}')">Xóa</button>
+        <input type="text" placeholder="Mô tả hạng mục" class="item-description" value="${defaultDesc}" />
+        <input type="number" placeholder="SL" class="item-quantity" value="${defaultQty}" min="1" />
+        <input type="number" placeholder="Đơn giá" class="item-price" value="${defaultPrice}" min="0" step="1000" />
+        <button type="button" class="line-item-remove" data-item-id="${itemId}">Xóa</button>
       `;
 
       container.appendChild(lineItem);
 
-      // Add event listeners
+      lineItem.querySelector('.line-item-remove').addEventListener('click', () => removeLineItem(itemId));
       lineItem.querySelectorAll('input').forEach((input) => {
-        input.addEventListener('change', updateLineItemTotals);
+        input.addEventListener('input', updateLineItemTotals);
       });
 
-      lineItemsData.push({ id: itemId });
       updateLineItemTotals();
     }
 
@@ -1161,7 +1400,6 @@
       const lineItem = document.getElementById(`line-item-${itemId}`);
       if (lineItem) {
         lineItem.remove();
-        lineItemsData = lineItemsData.filter((item) => item.id !== itemId);
         updateLineItemTotals();
       }
     }
@@ -1179,7 +1417,7 @@
       document.getElementById('invoiceTotalDisplay').textContent = formatCurrency(total);
     }
 
-    async function handleCreateInvoice(e) {
+    async function handleSaveInvoice(e) {
       e.preventDefault();
 
       const residentId = document.getElementById('resident').value;
@@ -1226,33 +1464,36 @@
       }
 
       try {
-        const resident = allResidents.find((r) => r.id === residentId);
-        const apartment = allApartments.find((a) => a.id === apartmentId);
-
-        const invoiceData = {
-          resident_id: residentId,
-          apartment_id: apartmentId,
-          invoice_date: new Date(invoiceDate + 'T00:00:00').toISOString(),
-          due_date: new Date(dueDate + 'T00:00:00').toISOString(),
+        const billingPeriod = invoiceDate.slice(0, 7);
+        const payload = {
+          billing_period: billingPeriod,
+          due_date: new Date(dueDate + 'T12:00:00').toISOString(),
           total_amount: totalAmount,
           line_items: lineItems,
           description: description,
-          status: INVOICE_STATUS.ISSUED,
-          resident_name: resident?.name,
-          apartment_number: apartment?.apartment_number,
         };
 
-        const response = await invoiceAPI.createInvoice(invoiceData);
-
-        if (response.success || response.data) {
+        if (editingInvoiceId) {
+          payload.status = document.getElementById('invoiceStatus').value;
+          await invoiceAPI.updateInvoice(editingInvoiceId, payload);
+          showToast('Hóa đơn đã được cập nhật', 'success');
+        } else {
+          Object.assign(payload, {
+            resident_id: residentId,
+            apartment_id: apartmentId,
+            status: 'pending',
+          });
+          await invoiceAPI.createInvoice(payload);
           showToast('Hóa đơn đã được tạo thành công', 'success');
-          closeInvoiceModal();
-          await loadInvoices();
-          updateKPIs();
         }
+
+        closeInvoiceModal();
+        await loadInvoices();
+        updateKPIs();
+        window.dispatchEvent(new CustomEvent('kpiNeedsRefresh'));
       } catch (error) {
-        console.error('Error creating invoice:', error);
-        showFormError('invoiceFormError', error.message || 'Lỗi tạo hóa đơn');
+        console.error('Error saving invoice:', error);
+        showFormError('invoiceFormError', error.message || 'Lỗi lưu hóa đơn');
       }
     }
 
@@ -1260,7 +1501,7 @@
       const invoice = allInvoices.find((i) => i.id === invoiceId);
       if (!invoice) return;
 
-      document.getElementById('paymentInvoiceNumber').value = invoice.invoice_number;
+      document.getElementById('paymentInvoiceNumber').value = invoice.invoice_code || invoice.invoice_number || invoice.id;
       document.getElementById('paymentAmount').value = formatCurrency(invoice.total_amount);
       document.getElementById('paymentPaid').value = invoice.total_amount;
       document.getElementById('paymentDate').valueAsDate = new Date();
@@ -1304,21 +1545,17 @@
 
       try {
         const paymentData = {
-          payment_method: paymentMethod,
-          payment_date: new Date(paymentDate + 'T00:00:00').toISOString(),
-          amount_paid: amountPaid,
-          reference_number: referenceNumber,
-          notes: notes,
+          amount: amountPaid,
+          method: paymentMethod === 'bank_transfer' ? 'transfer' : paymentMethod === 'online' ? 'card' : paymentMethod,
+          reference: referenceNumber,
         };
 
-        const response = await invoiceAPI.recordPayment(invoiceId, paymentData);
-
-        if (response.success || response.data) {
-          showToast('Thanh toán đã được ghi nhận', 'success');
-          closePaymentModal();
-          await loadInvoices();
-          updateKPIs();
-        }
+        await invoiceAPI.recordPayment(invoiceId, paymentData);
+        showToast('Thanh toán đã được ghi nhận', 'success');
+        closePaymentModal();
+        await loadInvoices();
+        updateKPIs();
+        window.dispatchEvent(new CustomEvent('kpiNeedsRefresh'));
       } catch (error) {
         console.error('Error recording payment:', error);
         showFormError('paymentFormError', error.message || 'Lỗi ghi nhận thanh toán');
@@ -1333,20 +1570,32 @@
 
     // Public methods for onclick handlers
     window.invoiceApp = {
-      viewInvoice: (invoiceId) => {
-        const invoice = allInvoices.find((i) => i.id === invoiceId);
-        if (!invoice) return;
-        alert(`Hóa đơn ${invoice.invoice_number}\n\nCư dân: ${invoice.resident_name}\nCăn hộ: ${invoice.apartment_number}\nSố tiền: ${formatCurrency(invoice.total_amount)}\nTrạng thái: ${getStatusLabel(invoice.status)}`);
-      },
-      editInvoice: (invoiceId) => {
-        showToast('Chức năng sửa đang được phát triển', 'info');
-      },
-      openPaymentModal: openPaymentModal,
+      viewInvoice,
+      editInvoice: openEditInvoiceModal,
+      openPaymentModal,
       deleteInvoice: async (invoiceId) => {
-        if (!confirm('Bạn có chắc chắn muốn xóa hóa đơn này?')) return;
-        showToast('Chức năng xóa đang được phát triển', 'info');
+        if (!canEditInvoice()) return;
+        if (!confirm('Bạn có chắc chắn muốn hủy hóa đơn này?')) return;
+        try {
+          const res = await invoiceAPI.getInvoiceByID(invoiceId);
+          const inv = res.data || res;
+          await invoiceAPI.updateInvoice(invoiceId, {
+            due_date: inv.due_date,
+            billing_period: inv.billing_period,
+            total_amount: inv.total_amount,
+            line_items: inv.line_items || [],
+            description: inv.description || '',
+            status: 'cancelled',
+          });
+          showToast('Hóa đơn đã được hủy', 'success');
+          await loadInvoices();
+          updateKPIs();
+        } catch (err) {
+          showToast(err.message, 'error');
+        }
       },
-      removeLineItem: removeLineItem,
+      addLineItem: () => addLineItem(),
+      removeLineItem,
     };
 
     // Initialize the page

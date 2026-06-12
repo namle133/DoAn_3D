@@ -8,8 +8,9 @@ const notificationAPI = {
   /**
    * Get all user notifications
    */
-  async getUserNotifications() {
-    return apiClient.get('/notifications');
+  async getUserNotifications(scope) {
+    const qs = scope === 'all' ? '?scope=all' : '';
+    return apiClient.get('/notifications' + qs);
   },
 
   /**

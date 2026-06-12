@@ -38,7 +38,7 @@
     <div class="section">
       <div class="section-title">
         <span>💰 Hóa đơn quá hạn</span>
-        <a href="/pages/invoices.html">Xem tất cả</a>
+        <a href="/pages/invoices.html" id="overdueViewAll">Xem & thu tiền →</a>
       </div>
       <div id="overdueInvoices">
         <div class="empty-state"><div class="empty-state-icon">💰</div><p>Đang tải...</p></div>
@@ -102,12 +102,12 @@
           <div class="kpi-card green">
             <div class="kpi-label">Doanh thu tháng</div>
             <div class="kpi-value" style="font-size:20px">${formatCurrency(k.monthly_revenue || 0)}</div>
-            <div class="kpi-sub">Tính đến hôm nay</div>
+            <div class="kpi-sub">Từ HĐ active · Đã thu: ${formatCurrency(k.monthly_collected || 0)}</div>
           </div>
-          <div class="kpi-card red">
+          <div class="kpi-card red" style="cursor:pointer" title="Cuộn xuống danh sách quá hạn" onclick="document.getElementById('overdueInvoices').scrollIntoView({behavior:'smooth'})">
             <div class="kpi-label">Hóa đơn quá hạn</div>
             <div class="kpi-value">${k.overdue_invoices || 0}</div>
-            <div class="kpi-sub">${formatCurrency(k.overdue_amount || 0)}</div>
+            <div class="kpi-sub">Còn nợ: ${formatCurrency(k.overdue_amount || 0)}</div>
           </div>
           <div class="kpi-card orange">
             <div class="kpi-label">HĐ sắp hết hạn</div>
@@ -126,26 +126,72 @@
       }
     }
 
+    function parseOverdueList(res) {
+      if (Array.isArray(res)) return res;
+      return res.data || res.invoices || [];
+    }
+
+    function daysOverdue(invoice) {
+      if (invoice.days_overdue != null) return invoice.days_overdue;
+      const due = new Date(invoice.due_date);
+      return Math.max(0, Math.floor((Date.now() - due.getTime()) / 86400000));
+    }
+
+    function contractResidentName(c) {
+      return c.resident_name
+        || c.Resident?.full_name
+        || c.resident?.full_name
+        || '-';
+    }
+
+    function contractApartmentCode(c) {
+      return c.apartment_code
+        || c.Apartment?.apartment_code
+        || c.apartment?.apartment_code
+        || '-';
+    }
+
     async function loadOverdueInvoices() {
+      const el = document.getElementById('overdueInvoices');
       try {
         const res = await invoiceAPI.getOverdueInvoices();
-        // Handle both wrapped and unwrapped responses
-        const invoices = (Array.isArray(res) ? res : (res.data || res.invoices || [])).slice(0, 8);
-        const el = document.getElementById('overdueInvoices');
+        const invoices = parseOverdueList(res).slice(0, 10);
+
         if (!invoices.length) {
           el.innerHTML = `<div class="empty-state"><div class="empty-state-icon">✓</div><p>Không có hóa đơn quá hạn</p></div>`;
           return;
         }
-        el.innerHTML = `<div class="table-responsive"><table>
-          <thead><tr><th>Mã HĐ</th><th>Căn hộ</th><th>Số tiền</th><th>Hạn TT</th><th>Quá hạn</th></tr></thead>
-          <tbody>${invoices.map(i => `<tr>
-            <td>${i.invoice_code || i.id}</td>
-            <td>${i.apartment_code || '-'}</td>
-            <td>${formatCurrency(i.total_amount)}</td>
-            <td>${formatDate(i.due_date)}</td>
-            <td><span class="badge badge-red">${Math.max(0, Math.floor((Date.now() - new Date(i.due_date)) / 86400000))} ngày</span></td>
-          </tr>`).join('')}</tbody></table></div>`;
-      } catch (_) {}
+
+        const totalOutstanding = invoices.reduce(
+          (s, i) => s + (i.outstanding_amount ?? (i.total_amount - (i.paid_amount || 0))),
+          0
+        );
+
+        el.innerHTML = `
+          <p style="color:#666;font-size:13px;margin-bottom:12px">
+            ${invoices.length} hóa đơn quá hạn · Tổng còn nợ (hiển thị): <strong>${formatCurrency(totalOutstanding)}</strong>
+          </p>
+          <div class="table-responsive"><table>
+            <thead><tr>
+              <th>Mã HĐ</th><th>Cư dân</th><th>Căn hộ</th><th>Còn nợ</th><th>Hạn TT</th><th>Quá hạn</th><th></th>
+            </tr></thead>
+            <tbody>${invoices.map((i) => {
+              const outstanding = i.outstanding_amount ?? (i.total_amount - (i.paid_amount || 0));
+              const days = daysOverdue(i);
+              return `<tr>
+                <td><strong>${i.invoice_code || i.id}</strong></td>
+                <td>${i.resident_name || '-'}</td>
+                <td>${i.apartment_code || '-'}</td>
+                <td><strong style="color:#c62828">${formatCurrency(outstanding)}</strong></td>
+                <td>${formatDate(i.due_date)}</td>
+                <td><span class="badge badge-red">${days} ngày</span></td>
+                <td><a href="/pages/invoices.html" class="btn btn-sm" style="padding:4px 8px;font-size:11px">Thu tiền</a></td>
+              </tr>`;
+            }).join('')}</tbody>
+          </table></div>`;
+      } catch (err) {
+        el.innerHTML = `<div class="alert alert-error">Không tải hóa đơn quá hạn: ${err.message}</div>`;
+      }
     }
 
     async function loadMaintenance() {
@@ -193,8 +239,8 @@
             const days = Math.ceil((new Date(c.end_date) - now) / 86400000);
             return `<tr>
               <td>${c.contract_code || c.id}</td>
-              <td>${c.resident_name || '-'}</td>
-              <td>${c.apartment_code || '-'}</td>
+              <td>${contractResidentName(c)}</td>
+              <td>${contractApartmentCode(c)}</td>
               <td>${formatDate(c.end_date)}</td>
               <td><span class="badge badge-orange">${days} ngày</span></td>
             </tr>`;
