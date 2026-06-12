@@ -17,12 +17,6 @@ DoAn_3D/
 └── README.md
 ```
 
-## Sơ đồ kiến trúc
-
-![Kiến trúc tổng thể](./docs/diagrams/high-level-architecture.png)
-
-*File gốc vector: [docs/diagrams/high-level-architecture.svg](./docs/diagrams/high-level-architecture.svg)*
-
 ## Tính năng
 
 - **Bản đồ nền**: OpenStreetMap mặc định, có thể đổi sang Satellite, Hybrid,
