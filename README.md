@@ -10,11 +10,18 @@ dựng bằng `SceneView` của **ArcGIS Maps SDK for JavaScript 4.30**.
 DoAn_3D/
 ├── index.html          # Trang chính, nhúng ArcGIS SDK + UI overlay
 ├── css/style.css       # Style cho title bar, north arrow
+├── docs/diagrams/      # Sơ đồ kiến trúc (PNG/SVG)
 ├── js/
 │   ├── buildings.js    # Toạ độ + kích thước các toà nhà (xấp xỉ)
 │   └── app.js          # Map / SceneView / Mesh + widgets (Compass, Search, ...)
 └── README.md
 ```
+
+## Sơ đồ kiến trúc
+
+![Kiến trúc tổng thể](./docs/diagrams/high-level-architecture.png)
+
+*File gốc vector: [docs/diagrams/high-level-architecture.svg](./docs/diagrams/high-level-architecture.svg)*
 
 ## Tính năng
 

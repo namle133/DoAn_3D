@@ -6,6 +6,7 @@
 import authManager from './auth-manager.js';
 import notificationAPI from '../api/notifications.js';
 import { ROLES } from '../utils/constants.js';
+import { showConfirm } from '../utils/confirm-dialog.js';
 
 const ROLE_LABELS = {
   admin: 'Quản trị viên',
@@ -115,7 +116,13 @@ async function initLayout(opts = {}) {
   let unreadCount = 0;
   try {
     const res = await notificationAPI.getUnreadNotifications();
-    unreadCount = (res.data || []).length;
+    if (typeof res.unread_count === 'number') {
+      unreadCount = res.unread_count;
+    } else if (Array.isArray(res)) {
+      unreadCount = res.length;
+    } else {
+      unreadCount = (res.data || []).length;
+    }
   } catch (_) { /* backend chưa chạy */ }
 
   const placeholder = document.getElementById('navbar-placeholder');
@@ -129,8 +136,15 @@ async function initLayout(opts = {}) {
 
   const logoutBtn = document.getElementById('layoutLogoutBtn');
   if (logoutBtn) {
-    logoutBtn.addEventListener('click', () => {
-      if (confirm('Bạn có chắc muốn đăng xuất?')) authManager.logout();
+    logoutBtn.addEventListener('click', async () => {
+      const ok = await showConfirm({
+        title: 'Đăng xuất',
+        message: 'Bạn có chắc muốn đăng xuất khỏi hệ thống? Phiên làm việc hiện tại sẽ kết thúc.',
+        confirmText: 'Đăng xuất',
+        cancelText: 'Ở lại',
+        variant: 'danger',
+      });
+      if (ok) authManager.logout();
     });
   }
 
@@ -168,6 +182,24 @@ async function initLayout(opts = {}) {
       sidebar.classList.remove('show');
       sidebarOverlay?.classList.remove('show');
     });
+  });
+
+  // Cập nhật badge khi trang thông báo thay đổi
+  window.addEventListener('notificationsUpdated', async () => {
+    try {
+      const res = await notificationAPI.getUnreadNotifications();
+      const count = typeof res.unread_count === 'number'
+        ? res.unread_count
+        : (res.data || []).length;
+      const badge = document.querySelector('.notif-badge');
+      if (badge) {
+        badge.textContent = count > 99 ? '99+' : count;
+        badge.style.display = count > 0 ? '' : 'none';
+      } else if (count > 0) {
+        const btn = document.querySelector('.notif-btn');
+        if (btn) btn.insertAdjacentHTML('beforeend', `<span class="notif-badge">${count > 99 ? '99+' : count}</span>`);
+      }
+    } catch (_) {}
   });
 
   return true;
